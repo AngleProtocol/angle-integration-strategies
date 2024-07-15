@@ -33,6 +33,7 @@
     "url": "https://github.com/AngleProtocol/boilerplate/issues"
   },
   "devDependencies": {
+    "@angleprotocol/sdk": "^2.16.7",
     "prettier": "^2.0.0",
     "prettier-plugin-solidity": "^1.1.3",
     "solhint": "^3.5.1",

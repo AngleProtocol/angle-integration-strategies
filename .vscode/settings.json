@@ -1,5 +1,5 @@
 {
-  "solidity.compileUsingRemoteVersion": "0.8.20",
+  "solidity.compileUsingRemoteVersion": "0.8.26",
   "[solidity]": {
     "editor.defaultFormatter": "JuanBlanco.solidity",
     "editor.formatOnSave": true
