@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: GPL-3.0
-
 pragma solidity 0.8.26;
 
 import { ERC4626, IERC20, ERC20, Math } from "oz/token/ERC20/extensions/ERC4626.sol";
@@ -49,25 +48,6 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      *  @notice Event emitted when the swap is performed
      */
     event AccrueInterest(uint256 newTotalAssets, uint256 integratorFeeShares, uint256 protocolFeeShares);
-
-    /*//////////////////////////////////////////////////////////////
-                                MODIFIER
-    //////////////////////////////////////////////////////////////*/
-
-    /**
-     * @notice Modifier to prevent outgoing assets
-     */
-    modifier noOutgoingAssets() {
-        uint256 assetBalance = IERC20(asset()).balanceOf(address(this));
-        uint256 strategyAssetBalance = IERC20(strategyAsset).balanceOf(address(this));
-        _;
-        if (
-            IERC20(asset()).balanceOf(address(this)) > assetBalance ||
-            IERC20(strategyAsset).balanceOf(address(this)) > strategyAssetBalance
-        ) {
-            revert OutgoingAssets();
-        }
-    }
 
     /*//////////////////////////////////////////////////////////////
                                 CONSTANTS
@@ -253,8 +233,25 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
         super._deposit(caller, receiver, assets, shares);
 
+        _afterDeposit(assets);
+
         // `lastTotalAssets + assets` may be a little off from `totalAssets()`.
         _updateLastTotalAssets(lastTotalAssets + assets);
+    }
+
+    /**
+     * @inheritdoc ERC4626
+     */
+    function _withdraw(
+        address caller,
+        address receiver,
+        address owner,
+        uint256 assets,
+        uint256 shares
+    ) internal override {
+        _beforeWithdraw(assets);
+
+        super._withdraw(caller, receiver, owner, assets, shares);
     }
 
     /**
@@ -363,21 +360,6 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      */
     function harvest(bytes calldata data) public onlyRole(KEEPER_ROLE) {
         _harvestRewards(data);
-    }
-
-    /**
-     * @notice Deposits rewards directly rewards onto the contract
-     * @param amount The amount of asset to deposit
-     * @param transfer Whether to transfer the asset from the caller
-     */
-    function notifyRewardAmount(uint256 amount, bool transfer) public {
-        if (transfer) {
-            IERC20(asset()).safeTransferFrom(msg.sender, address(this), amount);
-        } else if (IERC20(asset()).balanceOf(address(this)) < amount) {
-            revert InsufficientBalance();
-        }
-
-        _handleUserGain(amount);
     }
 
     /**
@@ -543,13 +525,29 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Swap tokens using the router/aggregator
+     * @notice Swap tokens using the router/aggregator + vest the profit
      * @param tokens array of tokens to swap
      * @param callDatas array of bytes to call the router/aggregator
      * @custom:requires KEEPER_ROLE
      */
-    function swap(address[] calldata tokens, bytes[] calldata callDatas) public onlyRole(KEEPER_ROLE) noOutgoingAssets {
+    function swap(address[] calldata tokens, bytes[] calldata callDatas) public onlyRole(KEEPER_ROLE) {
+        address localAsset = asset();
+        address localStrategyAsset = strategyAsset;
+        uint256 assetBalance = IERC20(localAsset).balanceOf(address(this));
+        uint256 strategyAssetBalance = IERC20(localStrategyAsset).balanceOf(address(this));
+
         _swap(tokens, callDatas);
+
+        uint256 newStrategyAssetBalance = IERC20(localStrategyAsset).balanceOf(address(this));
+
+        if (
+            IERC20(localAsset).balanceOf(address(this)) < assetBalance || newStrategyAssetBalance < strategyAssetBalance
+        ) {
+            revert OutgoingAssets();
+        }
+
+        _handleUserGain(newStrategyAssetBalance);
+        _afterDeposit(newStrategyAssetBalance);
     }
 
     /**
@@ -607,4 +605,16 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      * @return amount of asset held in the strategy contract
      */
     function _assetsHeld() internal view virtual returns (uint256);
+
+    /**
+     * @notice Hook that is called before a withdraw
+     * @param assets The amount of assets to withdraw
+     */
+    function _beforeWithdraw(uint256 assets) internal virtual;
+
+    /**
+     * @notice Hook that is called after a deposit
+     * @param assets The amount of assets to deposit
+     */
+    function _afterDeposit(uint256 assets) internal virtual;
 }
