@@ -10,3 +10,6 @@
 [submodule "lib/utils"]
 	path = lib/utils
 	url = https://github.com/AngleProtocol/utils
+[submodule "lib/morpho-blue"]
+	path = lib/morpho-blue
+	url = https://github.com/morpho-org/morpho-blue

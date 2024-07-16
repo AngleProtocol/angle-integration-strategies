@@ -2,13 +2,16 @@
 
 pragma solidity 0.8.26;
 
-import { ERC4626, IERC20, ERC20 } from "oz/token/ERC20/extensions/ERC4626.sol";
-import { AccessControl } from "oz/access/AccessControl.sol";
+import { ERC4626, IERC20, ERC20, Math } from "oz/token/ERC20/extensions/ERC4626.sol";
 import { SafeERC20 } from "oz/token/ERC20/utils/SafeERC20.sol";
+import { AccessControl } from "oz/access/AccessControl.sol";
+import { UtilsLib } from "morpho/libraries/UtilsLib.sol";
 import "./utils/Errors.sol";
 
 abstract contract BaseStrategy is ERC4626, AccessControl {
     using SafeERC20 for IERC20;
+    using UtilsLib for uint256;
+    using Math for uint256;
 
     /*//////////////////////////////////////////////////////////////
                                 EVENTS
@@ -38,11 +41,22 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      *  @notice Event emitted when the vesting period is updated
      */
     event VestingPeriodUpdated(uint256 newVestingPeriod);
+    /**
+     *  @notice Event emitted when the interest is accrued
+     */
+    event UpdateLastTotalAssets(uint256 updatedTotalAssets);
+    /**
+     *  @notice Event emitted when the swap is performed
+     */
+    event AccrueInterest(uint256 newTotalAssets, uint256 integratorFeeShares, uint256 protocolFeeShares);
 
     /*//////////////////////////////////////////////////////////////
                                 MODIFIER
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Modifier to prevent outgoing assets
+     */
     modifier noOutgoingAssets() {
         uint256 assetBalance = IERC20(asset()).balanceOf(address(this));
         uint256 strategyAssetBalance = IERC20(strategyAsset).balanceOf(address(this));
@@ -86,6 +100,10 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      * @notice The vesting period for the profit
      */
     uint256 public vestingPeriod;
+    /**
+     * @notice The last total assets of the vault
+     */
+    uint256 public lastTotalAssets;
 
     /**
      * @notice The address of the strategy asset (stUSD for example)
@@ -124,6 +142,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
         address initialAdmin,
         address initialSwapRouter,
         address initialTokenTransferAddress,
+        uint256 initialVestingPeriod,
         string memory definitiveName,
         string memory definitiveSymbol,
         address definitiveAsset,
@@ -143,6 +162,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
             revert ZeroAddress();
         }
 
+        vestingPeriod = initialVestingPeriod;
         performanceFee = initialPerformanceFee;
         protocolFee = definitiveProtocolFee;
         integratorFeeRecipient = initialIntegratorFeeRecipient;
@@ -157,6 +177,153 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     /*//////////////////////////////////////////////////////////////
                             ERC4626 FUNCTIONS
     //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @inheritdoc ERC4626
+     */
+    function totalAssets() public view override returns (uint256) {
+        return _assetsHeld() - lockedProfit();
+    }
+
+    /**
+     * @inheritdoc ERC4626
+     */
+    function deposit(uint256 assets, address receiver) public override returns (uint256 shares) {
+        uint256 newTotalAssets = _accrueFee();
+
+        // Update `lastTotalAssets` to avoid an inconsistent state in a re-entrant context.
+        // It is updated again in `_deposit`.
+        lastTotalAssets = newTotalAssets;
+
+        shares = _convertToSharesWithTotals(assets, totalSupply(), newTotalAssets, Math.Rounding.Floor);
+
+        _deposit(_msgSender(), receiver, assets, shares);
+    }
+
+    /**
+     * @inheritdoc ERC4626
+     */
+    function mint(uint256 shares, address receiver) public override returns (uint256 assets) {
+        uint256 newTotalAssets = _accrueFee();
+
+        // Update `lastTotalAssets` to avoid an inconsistent state in a re-entrant context.
+        // It is updated again in `_deposit`.
+        lastTotalAssets = newTotalAssets;
+
+        assets = _convertToAssetsWithTotals(shares, totalSupply(), newTotalAssets, Math.Rounding.Ceil);
+
+        _deposit(_msgSender(), receiver, assets, shares);
+    }
+
+    /**
+     * @inheritdoc ERC4626
+     */
+    function withdraw(uint256 assets, address receiver, address owner) public override returns (uint256 shares) {
+        uint256 newTotalAssets = _accrueFee();
+
+        // Do not call expensive `maxWithdraw` and optimistically withdraw assets.
+
+        shares = _convertToSharesWithTotals(assets, totalSupply(), newTotalAssets, Math.Rounding.Ceil);
+
+        // `newTotalAssets - assets` may be a little off from `totalAssets()`.
+        _updateLastTotalAssets(newTotalAssets.zeroFloorSub(assets));
+
+        _withdraw(_msgSender(), receiver, owner, assets, shares);
+    }
+
+    /**
+     * @inheritdoc ERC4626
+     */
+    function redeem(uint256 shares, address receiver, address owner) public override returns (uint256 assets) {
+        uint256 newTotalAssets = _accrueFee();
+
+        // Do not call expensive `maxRedeem` and optimistically redeem shares.
+
+        assets = _convertToAssetsWithTotals(shares, totalSupply(), newTotalAssets, Math.Rounding.Floor);
+
+        // `newTotalAssets - assets` may be a little off from `totalAssets()`.
+        _updateLastTotalAssets(newTotalAssets.zeroFloorSub(assets));
+
+        _withdraw(_msgSender(), receiver, owner, assets, shares);
+    }
+
+    /**
+     * @inheritdoc ERC4626
+     */
+    function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
+        super._deposit(caller, receiver, assets, shares);
+
+        // `lastTotalAssets + assets` may be a little off from `totalAssets()`.
+        _updateLastTotalAssets(lastTotalAssets + assets);
+    }
+
+    /**
+     * @inheritdoc ERC4626
+     * @dev The accrual of performance fees is taken into account in the conversion.
+     */
+    function _convertToShares(uint256 assets, Math.Rounding rounding) internal view override returns (uint256) {
+        (uint256 integratorFeeShares, uint256 protocolFeeShares, uint256 newTotalAssets) = _accruedFeeShares();
+
+        return
+            _convertToSharesWithTotals(
+                assets,
+                totalSupply() + protocolFeeShares + integratorFeeShares,
+                newTotalAssets,
+                rounding
+            );
+    }
+
+    /**
+     * @inheritdoc ERC4626
+     * @dev The accrual of performance fees is taken into account in the conversion.
+     */
+    function _convertToAssets(uint256 shares, Math.Rounding rounding) internal view override returns (uint256) {
+        (uint256 integratorFeeShares, uint256 protocolFeeShares, uint256 newTotalAssets) = _accruedFeeShares();
+
+        return
+            _convertToAssetsWithTotals(
+                shares,
+                totalSupply() + protocolFeeShares + integratorFeeShares,
+                newTotalAssets,
+                rounding
+            );
+    }
+
+    /**
+     * @param assets The amount of assets to convert
+     * @param newTotalSupply The new total supply of the vault
+     * @param newTotalAssets The new total assets of the vault
+     * @param rounding The rounding method to use
+     * @return The amount of shares that the vault would exchange for the amount of `assets` provided
+     *
+     * @dev It assumes that the arguments `newTotalSupply` and `newTotalAssets` are up to date.
+     */
+    function _convertToSharesWithTotals(
+        uint256 assets,
+        uint256 newTotalSupply,
+        uint256 newTotalAssets,
+        Math.Rounding rounding
+    ) internal view returns (uint256) {
+        return assets.mulDiv(newTotalSupply + 10 ** _decimalsOffset(), newTotalAssets + 1, rounding);
+    }
+
+    /**
+     * @param shares The amount of shares to convert
+     * @param newTotalSupply The new total supply of the vault
+     * @param newTotalAssets The new total assets of the vault
+     * @param rounding The rounding method to use
+     * @return The amount of assets that the vault would exchange for the amount of `shares` provided
+     *
+     * @dev It assumes that the arguments `newTotalSupply` and `newTotalAssets` are up to date.
+     */
+    function _convertToAssetsWithTotals(
+        uint256 shares,
+        uint256 newTotalSupply,
+        uint256 newTotalAssets,
+        Math.Rounding rounding
+    ) internal view returns (uint256) {
+        return shares.mulDiv(newTotalAssets + 1, newTotalSupply + 10 ** _decimalsOffset(), rounding);
+    }
 
     /*//////////////////////////////////////////////////////////////
                             HELPERS FUNCTIONS
@@ -216,7 +383,9 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     /**
      * @notice  Updates the profit and loss made on the underlying strategy
      */
-    function accumulate() public {}
+    function accumulate() public {
+        _updateLastTotalAssets(_accrueFee());
+    }
 
     /**
      * @notice Propagates a user side gain
@@ -226,6 +395,61 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
         if (gain != 0) {
             vestingProfit = (lockedProfit() + gain);
             lastUpdate = block.timestamp;
+        }
+    }
+
+    /// @dev Updates `lastTotalAssets` to `updatedTotalAssets`.
+    function _updateLastTotalAssets(uint256 updatedTotalAssets) internal {
+        lastTotalAssets = updatedTotalAssets;
+
+        emit UpdateLastTotalAssets(updatedTotalAssets);
+    }
+
+    /// @dev Accrues the fee and mints the fee shares to the fee recipient.
+    /// @return newTotalAssets The vaults total assets after accruing the interest.
+    function _accrueFee() internal returns (uint256 newTotalAssets) {
+        uint256 protocolFeeShares;
+        uint256 integratorFeeShares;
+        (integratorFeeShares, protocolFeeShares, newTotalAssets) = _accruedFeeShares();
+
+        if (integratorFeeShares != 0) {
+            _mint(integratorFeeRecipient, integratorFeeShares);
+        }
+        if (protocolFeeShares != 0) {
+            _mint(protocolFeeRecipient, protocolFeeShares);
+        }
+
+        emit AccrueInterest(newTotalAssets, integratorFeeShares, protocolFeeShares);
+    }
+
+    /// @dev Computes and returns the fee shares (`feeShares`) to mint and the new vault's total assets
+    /// (`newTotalAssets`).
+    function _accruedFeeShares()
+        internal
+        view
+        returns (uint256 integratorFeeShares, uint256 protocolFeeShares, uint256 newTotalAssets)
+    {
+        newTotalAssets = totalAssets();
+
+        uint256 totalInterest = newTotalAssets.zeroFloorSub(lastTotalAssets);
+        if (totalInterest != 0 && performanceFee != 0) {
+            // It is acknowledged that `feeAssets` may be rounded down to 0 if `totalInterest * fee < WAD`.
+            uint256 feeAssets = totalInterest.mulDiv(performanceFee, MAX_BPS);
+            uint256 protocolFeeAssets = feeAssets.mulDiv(protocolFee, MAX_BPS);
+            // The fee assets is subtracted from the total assets in these calculations to compensate for the fact
+            // that total assets is already increased by the total interest (including the fee assets).
+            integratorFeeShares = _convertToSharesWithTotals(
+                feeAssets - protocolFeeAssets,
+                totalSupply(),
+                newTotalAssets - feeAssets,
+                Math.Rounding.Floor
+            );
+            protocolFeeShares = _convertToSharesWithTotals(
+                protocolFeeAssets,
+                totalSupply(),
+                newTotalAssets - feeAssets,
+                Math.Rounding.Floor
+            );
         }
     }
 
@@ -377,18 +601,6 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      * @notice Claim external rewards
      */
     function _harvestRewards(bytes calldata data) internal virtual;
-
-    /**
-     * @notice Compute the amount of asset that can be deposited
-     * @return amount of asset that can be deposited
-     */
-    function _depositable() internal view virtual returns (uint256);
-
-    /**
-     * @notice Compute the amount of asset that can be withdrawn
-     * @return amount of asset that can be withdrawn
-     */
-    function _withdrawable() internal view virtual returns (uint256);
 
     /**
      * @notice Compute the amount of asset held in the strategy contract
