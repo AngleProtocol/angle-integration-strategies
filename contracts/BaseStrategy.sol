@@ -322,6 +322,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
         uint256 newTotalAssets,
         Math.Rounding rounding
     ) internal view returns (uint256) {
+        // TODO we need to override `_decimalsOffset`
         return assets.mulDiv(newTotalSupply + 10 ** _decimalsOffset(), newTotalAssets + 1, rounding);
     }
 
