@@ -20,11 +20,12 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     /**
      *  @notice Event emitted when the swap router is updated
      */
-    event SwapRouterUpdated(address newSwapRouter);
+    // Need to put address indexed in all the events
+    event SwapRouterUpdated(address indexed newSwapRouter);
     /**
      *  @notice Event emitted when the token proxy is updated
      */
-    event TokenTransferAddressUpdated(address newTokenTransferAddress);
+    event TokenTransferAddressUpdated(address indexed newTokenTransferAddress);
     /**
      *  @notice Event emitted when the performance fee is updated
      */
@@ -32,11 +33,11 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     /**
      *  @notice Event emitted when the integrator fee recipient is updated
      */
-    event IntegratorFeeRecipientUpdated(address newIntegratorFeeRecipient);
+    event IntegratorFeeRecipientUpdated(address indexed newIntegratorFeeRecipient);
     /**
      *  @notice Event emitted when the protocol fee recipient is updated
      */
-    event ProtocolFeeRecipientUpdated(address newProtocolFeeRecipient);
+    event ProtocolFeeRecipientUpdated(address indexed newProtocolFeeRecipient);
     /**
      *  @notice Event emitted when the vesting period is updated
      */
@@ -75,6 +76,8 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
 
     bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
     bytes32 public constant INTEGRATOR_ROLE = keccak256("INTEGRATOR_ROLE");
+    // Let's maybe rename it differently than protocolFee -> as we're developing this as Angle Labs, so it's not the protocol per se doing this
+    // Same for everything where we use the protocol terminology
     bytes32 public constant PROTOCOL_ROLE = keccak256("PROTOCOL_ROLE");
 
     uint256 public constant MAX_BPS = 100_000; // 100%
@@ -82,6 +85,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     /**
      * @notice The protocol fee taken from the performance fee
      */
+
     uint256 public immutable protocolFee;
 
     /*//////////////////////////////////////////////////////////////
@@ -95,6 +99,8 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     /**
      * @notice The last time the profit was updated
      */
+    // TODO you can bundle lastUpdate with performanceFee and vestingPeriod so it fits in just 1 storage slot
+    // Technically you could also have vestingProfit and lastTotalAssets as 2 uint128 (which is more than enough to handle everything)
     uint256 public lastUpdate;
     /**
      * @notice The vesting period for the profit
@@ -198,6 +204,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
         shares = _convertToSharesWithTotals(assets, totalSupply(), newTotalAssets, Math.Rounding.Floor);
 
         _deposit(_msgSender(), receiver, assets, shares);
+        // Where are we depositing into the strategy?
     }
 
     /**
@@ -213,6 +220,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
         assets = _convertToAssetsWithTotals(shares, totalSupply(), newTotalAssets, Math.Rounding.Ceil);
 
         _deposit(_msgSender(), receiver, assets, shares);
+        // Where are we depositing into the strategy?
     }
 
     /**
@@ -229,6 +237,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
         _updateLastTotalAssets(newTotalAssets.zeroFloorSub(assets));
 
         _withdraw(_msgSender(), receiver, owner, assets, shares);
+        // Where are we withdrawing
     }
 
     /**
@@ -245,6 +254,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
         _updateLastTotalAssets(newTotalAssets.zeroFloorSub(assets));
 
         _withdraw(_msgSender(), receiver, owner, assets, shares);
+        // Where are we withdrawing?
     }
 
     /**
@@ -361,6 +371,8 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      * @notice Harvest external rewards
      * @param data bytes to pass to the harvest function
      */
+    // I don't think we'd need this one most of the time -> typically if external rewards flow to the contract, these
+    // can be claimed permissionlessly by any address -> I'd be for completely removing it
     function harvest(bytes calldata data) public onlyRole(KEEPER_ROLE) {
         _harvestRewards(data);
     }
@@ -370,6 +382,10 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      * @param amount The amount of asset to deposit
      * @param transfer Whether to transfer the asset from the caller
      */
+    // TODO TODO CRITICAL VULN
+    // Attention: this one is super dangerous and its logic is broken -> anyone can call it but the balance comparison is
+    // done with the amount specified, not with the amount already in the contract
+    // We also need something to be able to invest the assets directly in the strategy when assets remain idle
     function notifyRewardAmount(uint256 amount, bool transfer) public {
         if (transfer) {
             IERC20(asset()).safeTransferFrom(msg.sender, address(this), amount);
@@ -559,6 +575,8 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      */
     function _swap(address[] calldata tokens, bytes[] calldata callDatas) internal {
         uint256 length = tokens.length;
+        // Let's handleUserGain directly in this function by checking the asset balance before and after the swap
+        // so after a swap we don't need to notifyRewardAmount in any way and everything is automatically calculated
         for (uint256 i; i < length; ++i) {
             _approveTokenIfNeeded(tokens[i], tokenTransferAddress);
             _performRouterSwap(callDatas[i]);
@@ -596,6 +614,8 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     /*//////////////////////////////////////////////////////////////
                                 HOOKS
     //////////////////////////////////////////////////////////////*/
+
+    // Let's implement a version of this strategy with ERC4626 deposits in Morpho or in stUSD so we have the full code ready to go
 
     /**
      * @notice Claim external rewards
