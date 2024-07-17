@@ -423,21 +423,17 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
         if (totalInterest != 0 && performanceFee != 0) {
             // It is acknowledged that `feeAssets` may be rounded down to 0 if `totalInterest * fee < WAD`.
             uint256 feeAssets = totalInterest.mulDiv(performanceFee, MAX_BPS);
-            uint256 protocolFeeAssets = feeAssets.mulDiv(PROTOCOL_FEE, MAX_BPS);
             // The fee assets is subtracted from the total assets in these calculations to compensate for the fact
             // that total assets is already increased by the total interest (including the fee assets).
-            integratorFeeShares = _convertToSharesWithTotals(
-                feeAssets - protocolFeeAssets,
+            feeShares = _convertToSharesWithTotals(
+                feeAssets,
                 totalSupply(),
                 newTotalAssets - feeAssets,
                 Math.Rounding.Floor
             );
-            protocolFeeShares = _convertToSharesWithTotals(
-                protocolFeeAssets,
-                totalSupply(),
-                newTotalAssets - feeAssets,
-                Math.Rounding.Floor
-            );
+
+            protocolFeeShares = feeShares.mulDiv(protocolFee, MAX_BPS);
+            integratorFeeShares = feeShares - protocolFeeShares; // Cannot underflow as protocolFee <= MAX_BPS
         }
     }
 
