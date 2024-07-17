@@ -7,6 +7,11 @@ import { AccessControl } from "oz/access/AccessControl.sol";
 import { UtilsLib } from "morpho/libraries/UtilsLib.sol";
 import "./utils/Errors.sol";
 
+/// @title BaseStrategy
+/// @author AngleLabs
+/// @notice Abstract contract to proxy the interaction with an strategy while taking performance fees
+/// @dev This contract is using MetaMorpho as a base for the ERC4626 logic with an extra vesting logic and extra fee
+/// https://github.com/morpho-org/metamorpho/blob/main/src/MetaMorpho.sol
 abstract contract BaseStrategy is ERC4626, AccessControl {
     using SafeERC20 for IERC20;
     using UtilsLib for uint256;

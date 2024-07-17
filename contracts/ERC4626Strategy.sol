@@ -3,6 +3,9 @@ pragma solidity 0.8.26;
 
 import { BaseStrategy, ERC4626, Math } from "./BaseStrategy.sol";
 
+/// @title ERC4626Strategy
+/// @author AngleLabs
+/// @notice Strategy contract implementing the logic to interact with an ERC4626 asset
 contract ERC4626Strategy is BaseStrategy {
     /*//////////////////////////////////////////////////////////////
                                CONSTRUCTOR
