@@ -60,6 +60,9 @@ contract ERC4626Strategy is BaseStrategy {
      * @inheritdoc BaseStrategy
      */
     function _assetsHeld() internal view override returns (uint256) {
+        // TODO let's add a comment that it doesn't work for all ERC4626 only for those who are supposed to have
+        // infinite liquidity like stUSD (real infinite liquidity)
+        // and MetaMorpho (you can possibly not withdraw it but we still consider your available balance as your total balance in assets)
         return ERC4626(STRATEGY_ASSET).convertToAssets(ERC4626(STRATEGY_ASSET).balanceOf(address(this)));
     }
 

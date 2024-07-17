@@ -71,10 +71,12 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
 
     bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
     bytes32 public constant INTEGRATOR_ROLE = keccak256("INTEGRATOR_ROLE");
+    // TODO let's keep PROTOCOL_ROLE
     bytes32 public constant LABS_ROLE = keccak256("LABS_ROLE");
 
     uint256 public constant WAD = 100_000; // 100%
 
+    // TODO we can make this fit into one slot: uint64 for LABS_FEE and uin8 for DECIMAL_OFFSET
     /**
      * @notice The labs fee taken from the performance fee
      */
@@ -101,6 +103,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      */
     uint256 public lastTotalAssets;
 
+    // TODO we could also share the slot between performanceFee and integratorFeeRecipient
     /**
      * @notice The performance fee taken from the harvested profits from the strategy
      */
@@ -165,6 +168,13 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
         STRATEGY_ASSET = definitiveStrategyAsset;
         _DECIMALS_OFFSET = uint256(18).zeroFloorSub(decimals());
 
+        // TODO We don't need this admin role as owner will either be
+        // We can put all swap related (swapRouter, tokenTransferAddress) to Keeper role
+        // and vestingPeriod we can let that to the integrator.
+        // Also currently all roles have as admin the DEFAULT_ADMIN_ROLE
+        // We can set INTEGRATOR_ROLE admin to itself, so that integrator can change as they wish
+        // Same for LABS_ROLE with itself as admin
+        // And for Keeper tole we can set the admin as INTEGRATOR_ROLE
         _grantRole(DEFAULT_ADMIN_ROLE, initialAdmin);
     }
 
@@ -186,6 +196,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
         return _assetsHeld() - lockedProfit();
     }
 
+    // TODO Let's reference Morpho contracts
     /**
      * @inheritdoc ERC4626
      */
@@ -322,7 +333,6 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
         uint256 newTotalAssets,
         Math.Rounding rounding
     ) internal view returns (uint256) {
-        // TODO we need to override `_decimalsOffset`
         return assets.mulDiv(newTotalSupply + 10 ** _decimalsOffset(), newTotalAssets + 1, rounding);
     }
 
@@ -492,6 +502,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      * @custom:requires INTEGRATOR_ROLE
      */
     function setIntegratorFeeRecipient(address newIntegratorFeeRecipient) external onlyRole(INTEGRATOR_ROLE) {
+        // TODO we maybe can add a modifier/internal function to check if the address is null or not, as it is used at multiple places
         if (newIntegratorFeeRecipient == address(0)) {
             revert ZeroAddress();
         }
@@ -558,6 +569,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
 
         _swap(tokens, callDatas);
 
+        // TODO we can also add a check that _asset balance is increasing too
         uint256 newAssetBalance = IERC20(_asset).balanceOf(address(this));
 
         _handleUserGain(newAssetBalance);
@@ -605,6 +617,8 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      * @param _token address of the token to approve
      * @param _spender address of the router/aggregator
      */
+    // TODO can't we do something like here to be sure to never encounter a problem
+    // https://github.com/AngleProtocol/borrow-contracts/blob/a528c31a10a19fbb7aeefbe69b59754edfbbefe4/contracts/swapper/Swapper.sol#L202
     function _approveTokenIfNeeded(address _token, address _spender) internal {
         if (ERC20(_token).allowance(address(this), _spender) == 0) {
             IERC20(_token).approve(_spender, type(uint256).max);
