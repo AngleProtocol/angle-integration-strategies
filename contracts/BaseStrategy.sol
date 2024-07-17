@@ -525,23 +525,24 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      * @custom:requires KEEPER_ROLE
      */
     function swap(address[] calldata tokens, bytes[] calldata callDatas) public onlyRole(KEEPER_ROLE) {
-        address localAsset = asset();
-        address localStrategyAsset = STRATEGY_ASSET;
-        uint256 assetBalance = IERC20(localAsset).balanceOf(address(this));
-        uint256 strategyAssetBalance = IERC20(localStrategyAsset).balanceOf(address(this));
+        address _asset = asset();
+        address _strategyAsset = STRATEGY_ASSET;
+
+        uint256 assetBalance = IERC20(_asset).balanceOf(address(this));
+        uint256 strategyAssetBalance = IERC20(_strategyAsset).balanceOf(address(this));
 
         _swap(tokens, callDatas);
 
-        uint256 newStrategyAssetBalance = IERC20(localStrategyAsset).balanceOf(address(this));
+        uint256 newAssetBalance = IERC20(_asset).balanceOf(address(this));
 
-        if (
-            IERC20(localAsset).balanceOf(address(this)) < assetBalance || newStrategyAssetBalance < strategyAssetBalance
-        ) {
+        _handleUserGain(newAssetBalance);
+        _afterDeposit(newAssetBalance);
+
+        uint256 newStrategyAssetBalance = IERC20(_strategyAsset).balanceOf(address(this));
+
+        if (newStrategyAssetBalance < strategyAssetBalance) {
             revert OutgoingAssets();
         }
-
-        _handleUserGain(newStrategyAssetBalance);
-        _afterDeposit(newStrategyAssetBalance);
     }
 
     /**
