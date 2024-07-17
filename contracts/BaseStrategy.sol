@@ -62,7 +62,15 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     /**
      * @notice The protocol fee taken from the performance fee
      */
-    uint256 public immutable protocolFee;
+    uint256 public immutable PROTOCOL_FEE;
+    /**
+     * @notice The address of the strategy asset (stUSD for example)
+     */
+    address public immutable STRATEGY_ASSET;
+    /**
+     * @notice The offset to convert the decimals
+     */
+    uint256 private immutable DECIMALS_OFFSET;
 
     /*//////////////////////////////////////////////////////////////
                             MUTABLE VARIABLES
@@ -85,10 +93,6 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      */
     uint256 public lastTotalAssets;
 
-    /**
-     * @notice The address of the strategy asset (stUSD for example)
-     */
-    address public immutable strategyAsset;
     /**
      * @notice The performance fee taken from the harvested profits from the strategy
      */
@@ -144,12 +148,14 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
 
         vestingPeriod = initialVestingPeriod;
         performanceFee = initialPerformanceFee;
-        protocolFee = definitiveProtocolFee;
         integratorFeeRecipient = initialIntegratorFeeRecipient;
         protocolFeeRecipient = initialProtocolFeeRecipient;
         swapRouter = initialSwapRouter;
         tokenTransferAddress = initialTokenTransferAddress;
-        strategyAsset = definitiveStrategyAsset;
+
+        PROTOCOL_FEE = definitiveProtocolFee;
+        STRATEGY_ASSET = definitiveStrategyAsset;
+        DECIMALS_OFFSET = 18.zeroFloorSub(decimals());
 
         _grantRole(DEFAULT_ADMIN_ROLE, initialAdmin);
     }
@@ -417,7 +423,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
         if (totalInterest != 0 && performanceFee != 0) {
             // It is acknowledged that `feeAssets` may be rounded down to 0 if `totalInterest * fee < WAD`.
             uint256 feeAssets = totalInterest.mulDiv(performanceFee, MAX_BPS);
-            uint256 protocolFeeAssets = feeAssets.mulDiv(protocolFee, MAX_BPS);
+            uint256 protocolFeeAssets = feeAssets.mulDiv(PROTOCOL_FEE, MAX_BPS);
             // The fee assets is subtracted from the total assets in these calculations to compensate for the fact
             // that total assets is already increased by the total interest (including the fee assets).
             integratorFeeShares = _convertToSharesWithTotals(
@@ -532,7 +538,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      */
     function swap(address[] calldata tokens, bytes[] calldata callDatas) public onlyRole(KEEPER_ROLE) {
         address localAsset = asset();
-        address localStrategyAsset = strategyAsset;
+        address localStrategyAsset = STRATEGY_ASSET;
         uint256 assetBalance = IERC20(localAsset).balanceOf(address(this));
         uint256 strategyAssetBalance = IERC20(localStrategyAsset).balanceOf(address(this));
 

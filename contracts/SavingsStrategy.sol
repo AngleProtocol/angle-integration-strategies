@@ -53,21 +53,21 @@ contract SavingsStrategy is BaseStrategy {
      * @inheritdoc BaseStrategy
      */
     function _beforeWithdraw(uint256 assets) internal override {
-        ERC4626(strategyAsset).withdraw(assets, address(this), address(this));
+        ERC4626(STRATEGY_ASSET).withdraw(assets, address(this), address(this));
     }
 
     /**
      * @inheritdoc BaseStrategy
      */
     function _afterDeposit(uint256 assets) internal override {
-        ERC4626(strategyAsset).deposit(assets, address(this));
+        ERC4626(STRATEGY_ASSET).deposit(assets, address(this));
     }
 
     /**
      * @inheritdoc BaseStrategy
      */
     function _assetsHeld() internal view override returns (uint256) {
-        return ERC4626(strategyAsset).convertToAssets(ERC4626(strategyAsset).balanceOf(address(this)));
+        return ERC4626(STRATEGY_ASSET).convertToAssets(ERC4626(STRATEGY_ASSET).balanceOf(address(this)));
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -78,14 +78,14 @@ contract SavingsStrategy is BaseStrategy {
      * @inheritdoc ERC4626
      */
     function maxDeposit(address) public view override returns (uint256) {
-        return ERC4626(strategyAsset).maxDeposit(address(this));
+        return ERC4626(STRATEGY_ASSET).maxDeposit(address(this));
     }
 
     /**
      * @inheritdoc ERC4626
      */
     function maxMint(address) public view override returns (uint256) {
-        return ERC4626(strategyAsset).maxMint(address(this));
+        return ERC4626(STRATEGY_ASSET).maxMint(address(this));
     }
 
     /**
@@ -95,7 +95,7 @@ contract SavingsStrategy is BaseStrategy {
         return
             Math.min(
                 _convertToAssets(balanceOf(owner), Math.Rounding.Floor),
-                ERC4626(strategyAsset).maxWithdraw(address(this))
+                ERC4626(STRATEGY_ASSET).maxWithdraw(address(this))
             );
     }
 
@@ -103,6 +103,6 @@ contract SavingsStrategy is BaseStrategy {
      * @inheritdoc ERC4626
      */
     function maxRedeem(address owner) public view override returns (uint256) {
-        return Math.min(balanceOf(owner), ERC4626(strategyAsset).maxRedeem(address(this)));
+        return Math.min(balanceOf(owner), ERC4626(STRATEGY_ASSET).maxRedeem(address(this)));
     }
 }
