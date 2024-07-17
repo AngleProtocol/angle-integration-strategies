@@ -33,9 +33,9 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      */
     event IntegratorFeeRecipientUpdated(address newIntegratorFeeRecipient);
     /**
-     *  @notice Event emitted when the protocol fee recipient is updated
+     *  @notice Event emitted when the labs fee recipient is updated
      */
-    event ProtocolFeeRecipientUpdated(address newProtocolFeeRecipient);
+    event LabsFeeRecipientUpdated(address newLabsFeeRecipient);
     /**
      *  @notice Event emitted when the vesting period is updated
      */
@@ -47,7 +47,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     /**
      *  @notice Event emitted when the swap is performed
      */
-    event AccrueInterest(uint256 newTotalAssets, uint256 integratorFeeShares, uint256 protocolFeeShares);
+    event AccrueInterest(uint256 newTotalAssets, uint256 integratorFeeShares, uint256 labsFeeShares);
 
     /*//////////////////////////////////////////////////////////////
                                 CONSTANTS
@@ -55,14 +55,14 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
 
     bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
     bytes32 public constant INTEGRATOR_ROLE = keccak256("INTEGRATOR_ROLE");
-    bytes32 public constant PROTOCOL_ROLE = keccak256("PROTOCOL_ROLE");
+    bytes32 public constant LABS_ROLE = keccak256("LABS_ROLE");
 
     uint256 public constant WAD = 100_000; // 100%
 
     /**
-     * @notice The protocol fee taken from the performance fee
+     * @notice The labs fee taken from the performance fee
      */
-    uint256 public immutable PROTOCOL_FEE;
+    uint256 public immutable LABS_FEE;
     /**
      * @notice The address of the strategy asset (stUSD for example)
      */
@@ -98,13 +98,13 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      */
     uint256 public performanceFee;
     /**
-     * @notice The address that receives the performance fee minus the protocol fee
+     * @notice The address that receives the performance fee minus the labs fee
      */
     address public integratorFeeRecipient;
     /**
-     * @notice The address that receives the protocol fee from the performance fee
+     * @notice The address that receives the labs fee from the performance fee
      */
-    address public protocolFeeRecipient;
+    address public labsFeeRecipient;
 
     /**
      *  @notice Dex/aggregaor router to call to perform swaps
@@ -122,7 +122,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     constructor(
         uint256 initialPerformanceFee,
         address initialIntegratorFeeRecipient,
-        address initialProtocolFeeRecipient,
+        address initialLabsFeeRecipient,
         address initialAdmin,
         address initialSwapRouter,
         address initialTokenTransferAddress,
@@ -131,14 +131,14 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
         string memory definitiveSymbol,
         address definitiveAsset,
         address definitiveStrategyAsset,
-        uint256 definitiveProtocolFee
+        uint256 definitiveLabsFee
     ) ERC20(definitiveName, definitiveSymbol) ERC4626(IERC20(definitiveAsset)) {
-        if (initialPerformanceFee > WAD || definitiveProtocolFee > WAD) {
+        if (initialPerformanceFee > WAD || definitiveLabsFee > WAD) {
             revert InvalidFee();
         }
         if (
             initialIntegratorFeeRecipient == address(0) ||
-            initialProtocolFeeRecipient == address(0) ||
+            initialLabsFeeRecipient == address(0) ||
             initialSwapRouter == address(0) ||
             initialTokenTransferAddress == address(0) ||
             definitiveStrategyAsset == address(0)
@@ -149,11 +149,11 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
         vestingPeriod = initialVestingPeriod;
         performanceFee = initialPerformanceFee;
         integratorFeeRecipient = initialIntegratorFeeRecipient;
-        protocolFeeRecipient = initialProtocolFeeRecipient;
+        labsFeeRecipient = initialLabsFeeRecipient;
         swapRouter = initialSwapRouter;
         tokenTransferAddress = initialTokenTransferAddress;
 
-        PROTOCOL_FEE = definitiveProtocolFee;
+        LABS_FEE = definitiveLabsFee;
         STRATEGY_ASSET = definitiveStrategyAsset;
         _DECIMALS_OFFSET = uint256(18).zeroFloorSub(decimals());
 
@@ -272,12 +272,12 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      * @dev The accrual of performance fees is taken into account in the conversion.
      */
     function _convertToShares(uint256 assets, Math.Rounding rounding) internal view override returns (uint256) {
-        (uint256 integratorFeeShares, uint256 protocolFeeShares, uint256 newTotalAssets) = _accruedFeeShares();
+        (uint256 integratorFeeShares, uint256 labsFeeShares, uint256 newTotalAssets) = _accruedFeeShares();
 
         return
             _convertToSharesWithTotals(
                 assets,
-                totalSupply() + protocolFeeShares + integratorFeeShares,
+                totalSupply() + labsFeeShares + integratorFeeShares,
                 newTotalAssets,
                 rounding
             );
@@ -288,12 +288,12 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      * @dev The accrual of performance fees is taken into account in the conversion.
      */
     function _convertToAssets(uint256 shares, Math.Rounding rounding) internal view override returns (uint256) {
-        (uint256 integratorFeeShares, uint256 protocolFeeShares, uint256 newTotalAssets) = _accruedFeeShares();
+        (uint256 integratorFeeShares, uint256 labsFeeShares, uint256 newTotalAssets) = _accruedFeeShares();
 
         return
             _convertToAssetsWithTotals(
                 shares,
-                totalSupply() + protocolFeeShares + integratorFeeShares,
+                totalSupply() + labsFeeShares + integratorFeeShares,
                 newTotalAssets,
                 rounding
             );
@@ -341,7 +341,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
 
     /**
      * @notice Computes the current amount of locked profit
-     * @dev This function is what effectively vests profits made by the protocol
+     * @dev This function is what effectively vests profits
      * @return The amount of locked profit
      */
     function lockedProfit() public view virtual returns (uint256) {
@@ -400,18 +400,18 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      * @return newTotalAssets The vault's total assets after accruing the interest.
      */
     function _accrueFee() internal returns (uint256 newTotalAssets) {
-        uint256 protocolFeeShares;
+        uint256 labsFeeShares;
         uint256 integratorFeeShares;
-        (integratorFeeShares, protocolFeeShares, newTotalAssets) = _accruedFeeShares();
+        (integratorFeeShares, labsFeeShares, newTotalAssets) = _accruedFeeShares();
 
         if (integratorFeeShares != 0) {
             _mint(integratorFeeRecipient, integratorFeeShares);
         }
-        if (protocolFeeShares != 0) {
-            _mint(protocolFeeRecipient, protocolFeeShares);
+        if (labsFeeShares != 0) {
+            _mint(labsFeeRecipient, labsFeeShares);
         }
 
-        emit AccrueInterest(newTotalAssets, integratorFeeShares, protocolFeeShares);
+        emit AccrueInterest(newTotalAssets, integratorFeeShares, labsFeeShares);
     }
 
     /**
@@ -421,7 +421,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     function _accruedFeeShares()
         internal
         view
-        returns (uint256 integratorFeeShares, uint256 protocolFeeShares, uint256 newTotalAssets)
+        returns (uint256 integratorFeeShares, uint256 labsFeeShares, uint256 newTotalAssets)
     {
         newTotalAssets = totalAssets();
 
@@ -438,8 +438,8 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
                 Math.Rounding.Floor
             );
 
-            protocolFeeShares = feeShares.mulDiv(PROTOCOL_FEE, WAD);
-            integratorFeeShares = feeShares - protocolFeeShares; // Cannot underflow as protocolFee <= WAD
+            labsFeeShares = feeShares.mulDiv(LABS_FEE, WAD);
+            integratorFeeShares = feeShares - labsFeeShares; // Cannot underflow as labsFee <= WAD
         }
     }
 
@@ -489,17 +489,17 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     }
 
     /**
-     * @notice Set the protocol fee recipient
-     * @param newProtocolFeeRecipient The new protocol fee recipient to set
-     * @custom:requires PROTOCOL_ROLE
+     * @notice Set the labs fee recipient
+     * @param newLabsFeeRecipient The new labs fee recipient to set
+     * @custom:requires LABS_ROLE
      */
-    function setProtocolFeeRecipient(address newProtocolFeeRecipient) external onlyRole(PROTOCOL_ROLE) {
-        if (newProtocolFeeRecipient == address(0)) {
+    function setLabsFeeRecipient(address newLabsFeeRecipient) external onlyRole(LABS_ROLE) {
+        if (newLabsFeeRecipient == address(0)) {
             revert ZeroAddress();
         }
-        protocolFeeRecipient = newProtocolFeeRecipient;
+        labsFeeRecipient = newLabsFeeRecipient;
 
-        emit ProtocolFeeRecipientUpdated(newProtocolFeeRecipient);
+        emit LabsFeeRecipientUpdated(newLabsFeeRecipient);
     }
 
     /**
