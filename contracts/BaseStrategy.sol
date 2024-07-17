@@ -34,6 +34,10 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      */
     event PerformanceFeeUpdated(uint256 newPerformanceFee);
     /**
+     *  @notice Event emitted when the developer fee is updated
+     */
+    event DeveloperFeeUpdated(uint256 newDeveloperFee);
+    /**
      *  @notice Event emitted when the integrator fee recipient is updated
      */
     event IntegratorFeeRecipientUpdated(address newIntegratorFeeRecipient);
@@ -63,15 +67,12 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     bytes32 public constant DEVELOPER_ROLE = keccak256("DEVELOPER_ROLE");
 
     uint32 public constant WAD = 100_000; // 100%
+    uint32 public constant MAX_FEE = 50_000; // 50%
 
     /**
      * @notice The offset to convert the decimals
      */
     uint8 private immutable _DECIMALS_OFFSET;
-    /**
-     * @notice The developer fee taken from the performance fee
-     */
-    uint32 public immutable LABS_FEE;
     /**
      * @notice The address of the strategy asset (stUSD for example)
      */
@@ -106,6 +107,10 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      */
     address public integratorFeeRecipient;
     /**
+     * @notice The developer fee taken from the performance fee
+     */
+    uint32 public developerFee;
+    /**
      * @notice The address that receives the developer fee from the performance fee
      */
     address public developerFeeRecipient;
@@ -124,6 +129,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
 
     constructor(
         uint32 initialPerformanceFee,
+        uint32 initialDeveloperFee,
         address initialIntegratorFeeRecipient,
         address initialDeveloperFeeRecipient,
         address initialAdmin,
@@ -133,10 +139,9 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
         string memory definitiveName,
         string memory definitiveSymbol,
         address definitiveAsset,
-        address definitiveStrategyAsset,
-        uint32 definitiveDeveloperFee
+        address definitiveStrategyAsset
     ) ERC20(definitiveName, definitiveSymbol) ERC4626(IERC20(definitiveAsset)) {
-        if (initialPerformanceFee > WAD || definitiveDeveloperFee > WAD) {
+        if (initialPerformanceFee > WAD || initialDeveloperFee > WAD || initialDeveloperFee > MAX_FEE) {
             revert InvalidFee();
         }
         if (
@@ -151,12 +156,12 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
 
         vestingPeriod = initialVestingPeriod;
         performanceFee = initialPerformanceFee;
+        developerFee = initialDeveloperFee;
         integratorFeeRecipient = initialIntegratorFeeRecipient;
         developerFeeRecipient = initialDeveloperFeeRecipient;
         swapRouter = initialSwapRouter;
         tokenTransferAddress = initialTokenTransferAddress;
 
-        LABS_FEE = definitiveDeveloperFee;
         STRATEGY_ASSET = definitiveStrategyAsset;
         _DECIMALS_OFFSET = uint8(uint256(18).zeroFloorSub(decimals()));
 
@@ -441,7 +446,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
                 Math.Rounding.Floor
             );
 
-            developerFeeShares = feeShares.mulDiv(LABS_FEE, WAD);
+            developerFeeShares = feeShares.mulDiv(developerFee, WAD);
             integratorFeeShares = feeShares - developerFeeShares; // Cannot underflow as developerFee <= WAD
         }
     }
@@ -475,6 +480,20 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
         performanceFee = newPerformanceFee;
 
         emit PerformanceFeeUpdated(newPerformanceFee);
+    }
+
+    /**
+     * @notice Set the developer fee for the strategy
+     * @param newDeveloperFee The new developer fee to set
+     * @custom:requires DEVELOPER_ROLE
+     */
+    function setDeveloperFee(uint32 newDeveloperFee) external onlyRole(DEVELOPER_ROLE) {
+        if (newDeveloperFee > WAD || newDeveloperFee > performanceFee) {
+            revert InvalidFee();
+        }
+        developerFee = newDeveloperFee;
+
+        emit DeveloperFeeUpdated(newDeveloperFee);
     }
 
     /**

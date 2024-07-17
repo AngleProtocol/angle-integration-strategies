@@ -13,8 +13,9 @@ contract ERC4626Strategy is BaseStrategy {
 
     constructor(
         uint32 initialPerformanceFee,
+        uint32 initialDeveloperFee,
         address initialIntegratorFeeRecipient,
-        address initialProtocolFeeRecipient,
+        address initialDeveloperFeeRecipient,
         address initialAdmin,
         address initialSwapRouter,
         address initialTokenTransferAddress,
@@ -22,13 +23,13 @@ contract ERC4626Strategy is BaseStrategy {
         string memory definitiveName,
         string memory definitiveSymbol,
         address definitiveAsset,
-        address definitiveStrategyAsset,
-        uint32 definitiveProtocolFee
+        address definitiveStrategyAsset
     )
         BaseStrategy(
             initialPerformanceFee,
+            initialDeveloperFee,
             initialIntegratorFeeRecipient,
-            initialProtocolFeeRecipient,
+            initialDeveloperFeeRecipient,
             initialAdmin,
             initialSwapRouter,
             initialTokenTransferAddress,
@@ -36,8 +37,7 @@ contract ERC4626Strategy is BaseStrategy {
             definitiveName,
             definitiveSymbol,
             definitiveAsset,
-            definitiveStrategyAsset,
-            definitiveProtocolFee
+            definitiveStrategyAsset
         )
     {}
 
