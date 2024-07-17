@@ -33,9 +33,9 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      */
     event IntegratorFeeRecipientUpdated(address newIntegratorFeeRecipient);
     /**
-     *  @notice Event emitted when the labs fee recipient is updated
+     *  @notice Event emitted when the developer fee recipient is updated
      */
-    event LabsFeeRecipientUpdated(address newLabsFeeRecipient);
+    event DeveloperFeeRecipientUpdated(address newDeveloperFeeRecipient);
     /**
      *  @notice Event emitted when the vesting period is updated
      */
@@ -47,7 +47,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     /**
      *  @notice Event emitted when the swap is performed
      */
-    event AccrueInterest(uint256 newTotalAssets, uint256 integratorFeeShares, uint256 labsFeeShares);
+    event AccrueInterest(uint256 newTotalAssets, uint256 integratorFeeShares, uint256 developerFeeShares);
 
     /*//////////////////////////////////////////////////////////////
                                 CONSTANTS
@@ -55,7 +55,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
 
     bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
     bytes32 public constant INTEGRATOR_ROLE = keccak256("INTEGRATOR_ROLE");
-    bytes32 public constant LABS_ROLE = keccak256("LABS_ROLE");
+    bytes32 public constant DEVELOPER_ROLE = keccak256("DEVELOPER_ROLE");
 
     uint32 public constant WAD = 100_000; // 100%
 
@@ -64,7 +64,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      */
     uint8 private immutable _DECIMALS_OFFSET;
     /**
-     * @notice The labs fee taken from the performance fee
+     * @notice The developer fee taken from the performance fee
      */
     uint32 public immutable LABS_FEE;
     /**
@@ -97,13 +97,13 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      */
     uint32 public performanceFee;
     /**
-     * @notice The address that receives the performance fee minus the labs fee
+     * @notice The address that receives the performance fee minus the developer fee
      */
     address public integratorFeeRecipient;
     /**
-     * @notice The address that receives the labs fee from the performance fee
+     * @notice The address that receives the developer fee from the performance fee
      */
-    address public labsFeeRecipient;
+    address public developerFeeRecipient;
     /**
      *  @notice Dex/aggregaor router to call to perform swaps
      */
@@ -120,7 +120,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     constructor(
         uint32 initialPerformanceFee,
         address initialIntegratorFeeRecipient,
-        address initialLabsFeeRecipient,
+        address initialDeveloperFeeRecipient,
         address initialAdmin,
         address initialSwapRouter,
         address initialTokenTransferAddress,
@@ -129,14 +129,14 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
         string memory definitiveSymbol,
         address definitiveAsset,
         address definitiveStrategyAsset,
-        uint32 definitiveLabsFee
+        uint32 definitiveDeveloperFee
     ) ERC20(definitiveName, definitiveSymbol) ERC4626(IERC20(definitiveAsset)) {
-        if (initialPerformanceFee > WAD || definitiveLabsFee > WAD) {
+        if (initialPerformanceFee > WAD || definitiveDeveloperFee > WAD) {
             revert InvalidFee();
         }
         if (
             initialIntegratorFeeRecipient == address(0) ||
-            initialLabsFeeRecipient == address(0) ||
+            initialDeveloperFeeRecipient == address(0) ||
             initialSwapRouter == address(0) ||
             initialTokenTransferAddress == address(0) ||
             definitiveStrategyAsset == address(0)
@@ -147,11 +147,11 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
         vestingPeriod = initialVestingPeriod;
         performanceFee = initialPerformanceFee;
         integratorFeeRecipient = initialIntegratorFeeRecipient;
-        labsFeeRecipient = initialLabsFeeRecipient;
+        developerFeeRecipient = initialDeveloperFeeRecipient;
         swapRouter = initialSwapRouter;
         tokenTransferAddress = initialTokenTransferAddress;
 
-        LABS_FEE = definitiveLabsFee;
+        LABS_FEE = definitiveDeveloperFee;
         STRATEGY_ASSET = definitiveStrategyAsset;
         _DECIMALS_OFFSET = uint8(uint256(18).zeroFloorSub(decimals()));
 
@@ -270,12 +270,12 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      * @dev The accrual of performance fees is taken into account in the conversion.
      */
     function _convertToShares(uint256 assets, Math.Rounding rounding) internal view override returns (uint256) {
-        (uint256 integratorFeeShares, uint256 labsFeeShares, uint256 newTotalAssets) = _accruedFeeShares();
+        (uint256 integratorFeeShares, uint256 developerFeeShares, uint256 newTotalAssets) = _accruedFeeShares();
 
         return
             _convertToSharesWithTotals(
                 assets,
-                totalSupply() + labsFeeShares + integratorFeeShares,
+                totalSupply() + developerFeeShares + integratorFeeShares,
                 newTotalAssets,
                 rounding
             );
@@ -286,12 +286,12 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      * @dev The accrual of performance fees is taken into account in the conversion.
      */
     function _convertToAssets(uint256 shares, Math.Rounding rounding) internal view override returns (uint256) {
-        (uint256 integratorFeeShares, uint256 labsFeeShares, uint256 newTotalAssets) = _accruedFeeShares();
+        (uint256 integratorFeeShares, uint256 developerFeeShares, uint256 newTotalAssets) = _accruedFeeShares();
 
         return
             _convertToAssetsWithTotals(
                 shares,
-                totalSupply() + labsFeeShares + integratorFeeShares,
+                totalSupply() + developerFeeShares + integratorFeeShares,
                 newTotalAssets,
                 rounding
             );
@@ -398,18 +398,18 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      * @return newTotalAssets The vault's total assets after accruing the interest.
      */
     function _accrueFee() internal returns (uint256 newTotalAssets) {
-        uint256 labsFeeShares;
+        uint256 developerFeeShares;
         uint256 integratorFeeShares;
-        (integratorFeeShares, labsFeeShares, newTotalAssets) = _accruedFeeShares();
+        (integratorFeeShares, developerFeeShares, newTotalAssets) = _accruedFeeShares();
 
         if (integratorFeeShares != 0) {
             _mint(integratorFeeRecipient, integratorFeeShares);
         }
-        if (labsFeeShares != 0) {
-            _mint(labsFeeRecipient, labsFeeShares);
+        if (developerFeeShares != 0) {
+            _mint(developerFeeRecipient, developerFeeShares);
         }
 
-        emit AccrueInterest(newTotalAssets, integratorFeeShares, labsFeeShares);
+        emit AccrueInterest(newTotalAssets, integratorFeeShares, developerFeeShares);
     }
 
     /**
@@ -419,7 +419,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     function _accruedFeeShares()
         internal
         view
-        returns (uint256 integratorFeeShares, uint256 labsFeeShares, uint256 newTotalAssets)
+        returns (uint256 integratorFeeShares, uint256 developerFeeShares, uint256 newTotalAssets)
     {
         newTotalAssets = totalAssets();
 
@@ -436,8 +436,8 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
                 Math.Rounding.Floor
             );
 
-            labsFeeShares = feeShares.mulDiv(LABS_FEE, WAD);
-            integratorFeeShares = feeShares - labsFeeShares; // Cannot underflow as labsFee <= WAD
+            developerFeeShares = feeShares.mulDiv(LABS_FEE, WAD);
+            integratorFeeShares = feeShares - developerFeeShares; // Cannot underflow as developerFee <= WAD
         }
     }
 
@@ -487,17 +487,17 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     }
 
     /**
-     * @notice Set the labs fee recipient
-     * @param newLabsFeeRecipient The new labs fee recipient to set
-     * @custom:requires LABS_ROLE
+     * @notice Set the developer fee recipient
+     * @param newDeveloperFeeRecipient The new developer fee recipient to set
+     * @custom:requires DEVELOPER_ROLE
      */
-    function setLabsFeeRecipient(address newLabsFeeRecipient) external onlyRole(LABS_ROLE) {
-        if (newLabsFeeRecipient == address(0)) {
+    function setDeveloperFeeRecipient(address newDeveloperFeeRecipient) external onlyRole(DEVELOPER_ROLE) {
+        if (newDeveloperFeeRecipient == address(0)) {
             revert ZeroAddress();
         }
-        labsFeeRecipient = newLabsFeeRecipient;
+        developerFeeRecipient = newDeveloperFeeRecipient;
 
-        emit LabsFeeRecipientUpdated(newLabsFeeRecipient);
+        emit DeveloperFeeRecipientUpdated(newDeveloperFeeRecipient);
     }
 
     /**
