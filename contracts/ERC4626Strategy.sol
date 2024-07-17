@@ -3,7 +3,7 @@ pragma solidity 0.8.26;
 
 import { BaseStrategy, ERC4626, Math } from "./BaseStrategy.sol";
 
-contract SavingsStrategy is BaseStrategy {
+contract ERC4626Strategy is BaseStrategy {
     /*//////////////////////////////////////////////////////////////
                                CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
