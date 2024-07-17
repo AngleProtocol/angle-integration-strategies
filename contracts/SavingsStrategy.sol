@@ -45,13 +45,6 @@ contract SavingsStrategy is BaseStrategy {
     /**
      * @inheritdoc BaseStrategy
      */
-    function _harvestRewards(bytes calldata) internal override {
-        // Do nothing
-    }
-
-    /**
-     * @inheritdoc BaseStrategy
-     */
     function _beforeWithdraw(uint256 assets) internal override {
         ERC4626(STRATEGY_ASSET).withdraw(assets, address(this), address(this));
     }

@@ -361,14 +361,6 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Harvest external rewards
-     * @param data bytes to pass to the harvest function
-     */
-    function harvest(bytes calldata data) public onlyRole(KEEPER_ROLE) {
-        _harvestRewards(data);
-    }
-
-    /**
      * @notice  Updates the profit and loss made on the underlying strategy
      */
     function accumulate() public {
@@ -596,11 +588,6 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     /*//////////////////////////////////////////////////////////////
                                 HOOKS
     //////////////////////////////////////////////////////////////*/
-
-    /**
-     * @notice Claim external rewards
-     */
-    function _harvestRewards(bytes calldata data) internal virtual;
 
     /**
      * @notice Compute the amount of asset held in the strategy contract
