@@ -59,6 +59,17 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     event AccrueInterest(uint256 newTotalAssets, uint256 integratorFeeShares, uint256 developerFeeShares);
 
     /*//////////////////////////////////////////////////////////////
+                                MODIFIERS
+    //////////////////////////////////////////////////////////////*/
+
+    modifier noZeroAddress(address targetAddress) {
+        if (targetAddress == address(0)) {
+            revert ZeroAddress();
+        }
+        _;
+    }
+
+    /*//////////////////////////////////////////////////////////////
                                 CONSTANTS
     //////////////////////////////////////////////////////////////*/
 
@@ -501,10 +512,9 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      * @param newIntegratorFeeRecipient The new integrator fee recipient to set
      * @custom:requires INTEGRATOR_ROLE
      */
-    function setIntegratorFeeRecipient(address newIntegratorFeeRecipient) external onlyRole(INTEGRATOR_ROLE) {
-        if (newIntegratorFeeRecipient == address(0)) {
-            revert ZeroAddress();
-        }
+    function setIntegratorFeeRecipient(
+        address newIntegratorFeeRecipient
+    ) external onlyRole(INTEGRATOR_ROLE) noZeroAddress(newIntegratorFeeRecipient) {
         integratorFeeRecipient = newIntegratorFeeRecipient;
 
         emit IntegratorFeeRecipientUpdated(newIntegratorFeeRecipient);
@@ -515,10 +525,9 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      * @param newDeveloperFeeRecipient The new developer fee recipient to set
      * @custom:requires DEVELOPER_ROLE
      */
-    function setDeveloperFeeRecipient(address newDeveloperFeeRecipient) external onlyRole(DEVELOPER_ROLE) {
-        if (newDeveloperFeeRecipient == address(0)) {
-            revert ZeroAddress();
-        }
+    function setDeveloperFeeRecipient(
+        address newDeveloperFeeRecipient
+    ) external onlyRole(DEVELOPER_ROLE) noZeroAddress(newDeveloperFeeRecipient) {
         developerFeeRecipient = newDeveloperFeeRecipient;
 
         emit DeveloperFeeRecipientUpdated(newDeveloperFeeRecipient);
@@ -529,9 +538,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      * @param newSwapRouter address of the router
      * @custom:requires DEFAULT_ADMIN_ROLE
      */
-    function setSwapRouter(address newSwapRouter) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (newSwapRouter == address(0)) revert ZeroAddress();
-
+    function setSwapRouter(address newSwapRouter) external onlyRole(DEFAULT_ADMIN_ROLE) noZeroAddress(newSwapRouter) {
         swapRouter = newSwapRouter;
 
         emit SwapRouterUpdated(newSwapRouter);
@@ -542,9 +549,9 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      * @param newTokenTransferAddress address of the token proxy
      * @custom:requires DEFAULT_ADMIN_ROLE
      */
-    function setTokenTransferAddress(address newTokenTransferAddress) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (newTokenTransferAddress == address(0)) revert ZeroAddress();
-
+    function setTokenTransferAddress(
+        address newTokenTransferAddress
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) noZeroAddress(newTokenTransferAddress) {
         tokenTransferAddress = newTokenTransferAddress;
 
         emit TokenTransferAddressUpdated(newTokenTransferAddress);
