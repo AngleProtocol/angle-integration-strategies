@@ -70,6 +70,27 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     }
 
     /*//////////////////////////////////////////////////////////////
+                                STRUCTS
+    //////////////////////////////////////////////////////////////*/
+
+    struct ConstructorArgs {
+        uint32 initialPerformanceFee;
+        uint32 initialDeveloperFee;
+        address initialIntegratorFeeRecipient;
+        address initialDeveloperFeeRecipient;
+        address initialKeeper;
+        address initialDeveloper;
+        address initialIntegrator;
+        address initialSwapRouter;
+        address initialTokenTransferAddress;
+        uint64 initialVestingPeriod;
+        string definitiveName;
+        string definitiveSymbol;
+        address definitiveAsset;
+        address definitiveStrategyAsset;
+    }
+
+    /*//////////////////////////////////////////////////////////////
                                 CONSTANTS
     //////////////////////////////////////////////////////////////*/
 
@@ -139,44 +160,39 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     //////////////////////////////////////////////////////////////*/
 
     constructor(
-        uint32 initialPerformanceFee,
-        uint32 initialDeveloperFee,
-        address initialIntegratorFeeRecipient,
-        address initialDeveloperFeeRecipient,
-        address initialAdmin,
-        address initialSwapRouter,
-        address initialTokenTransferAddress,
-        uint64 initialVestingPeriod,
-        string memory definitiveName,
-        string memory definitiveSymbol,
-        address definitiveAsset,
-        address definitiveStrategyAsset
-    ) ERC20(definitiveName, definitiveSymbol) ERC4626(IERC20(definitiveAsset)) {
-        if (initialPerformanceFee > WAD || initialDeveloperFee > WAD || initialDeveloperFee > MAX_FEE) {
+        ConstructorArgs memory args
+    ) ERC20(args.definitiveName, args.definitiveSymbol) ERC4626(IERC20(args.definitiveAsset)) {
+        if (args.initialPerformanceFee > WAD || args.initialDeveloperFee > WAD || args.initialDeveloperFee > MAX_FEE) {
             revert InvalidFee();
         }
         if (
-            initialIntegratorFeeRecipient == address(0) ||
-            initialDeveloperFeeRecipient == address(0) ||
-            initialSwapRouter == address(0) ||
-            initialTokenTransferAddress == address(0) ||
-            definitiveStrategyAsset == address(0)
+            args.initialIntegratorFeeRecipient == address(0) ||
+            args.initialDeveloperFeeRecipient == address(0) ||
+            args.initialSwapRouter == address(0) ||
+            args.initialTokenTransferAddress == address(0) ||
+            args.definitiveStrategyAsset == address(0)
         ) {
             revert ZeroAddress();
         }
 
-        vestingPeriod = initialVestingPeriod;
-        performanceFee = initialPerformanceFee;
-        developerFee = initialDeveloperFee;
-        integratorFeeRecipient = initialIntegratorFeeRecipient;
-        developerFeeRecipient = initialDeveloperFeeRecipient;
-        swapRouter = initialSwapRouter;
-        tokenTransferAddress = initialTokenTransferAddress;
+        vestingPeriod = args.initialVestingPeriod;
+        performanceFee = args.initialPerformanceFee;
+        developerFee = args.initialDeveloperFee;
+        integratorFeeRecipient = args.initialIntegratorFeeRecipient;
+        developerFeeRecipient = args.initialDeveloperFeeRecipient;
+        swapRouter = args.initialSwapRouter;
+        tokenTransferAddress = args.initialTokenTransferAddress;
 
-        STRATEGY_ASSET = definitiveStrategyAsset;
+        STRATEGY_ASSET = args.definitiveStrategyAsset;
         _DECIMALS_OFFSET = uint8(uint256(18).zeroFloorSub(decimals()));
 
-        _grantRole(DEFAULT_ADMIN_ROLE, initialAdmin);
+        // Roles managment
+        _grantRole(KEEPER_ROLE, args.initialKeeper);
+        _grantRole(DEVELOPER_ROLE, args.initialDeveloper);
+        _grantRole(INTEGRATOR_ROLE, args.initialIntegrator);
+        _setRoleAdmin(KEEPER_ROLE, DEVELOPER_ROLE);
+        _setRoleAdmin(INTEGRATOR_ROLE, INTEGRATOR_ROLE);
+        _setRoleAdmin(DEVELOPER_ROLE, DEVELOPER_ROLE);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -469,9 +485,9 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     /**
      * @notice Set the vesting period for the profit
      * @param newVestingPeriod The new vesting period to set
-     * @custom:requires DEFAULT_ADMIN_ROLE
+     * @custom:requires INTEGRATOR_ROLE
      */
-    function setVestingPeriod(uint64 newVestingPeriod) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setVestingPeriod(uint64 newVestingPeriod) external onlyRole(INTEGRATOR_ROLE) {
         if (newVestingPeriod == 0 || newVestingPeriod > 365 days) revert InvalidParameter();
 
         vestingPeriod = newVestingPeriod;
@@ -536,9 +552,9 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     /**
      * @notice Set the dex/aggregator router to call to perform swaps
      * @param newSwapRouter address of the router
-     * @custom:requires DEFAULT_ADMIN_ROLE
+     * @custom:requires DEVELOPER_ROLE
      */
-    function setSwapRouter(address newSwapRouter) external onlyRole(DEFAULT_ADMIN_ROLE) noZeroAddress(newSwapRouter) {
+    function setSwapRouter(address newSwapRouter) external onlyRole(DEVELOPER_ROLE) noZeroAddress(newSwapRouter) {
         swapRouter = newSwapRouter;
 
         emit SwapRouterUpdated(newSwapRouter);
@@ -547,11 +563,11 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     /**
      * @notice Set the token proxy address to allow to swap tokens
      * @param newTokenTransferAddress address of the token proxy
-     * @custom:requires DEFAULT_ADMIN_ROLE
+     * @custom:requires DEVELOPER_ROLE
      */
     function setTokenTransferAddress(
         address newTokenTransferAddress
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) noZeroAddress(newTokenTransferAddress) {
+    ) external onlyRole(DEVELOPER_ROLE) noZeroAddress(newTokenTransferAddress) {
         tokenTransferAddress = newTokenTransferAddress;
 
         emit TokenTransferAddressUpdated(newTokenTransferAddress);
