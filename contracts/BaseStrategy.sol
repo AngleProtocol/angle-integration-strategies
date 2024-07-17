@@ -57,7 +57,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     bytes32 public constant INTEGRATOR_ROLE = keccak256("INTEGRATOR_ROLE");
     bytes32 public constant PROTOCOL_ROLE = keccak256("PROTOCOL_ROLE");
 
-    uint256 public constant MAX_BPS = 100_000; // 100%
+    uint256 public constant WAD = 100_000; // 100%
 
     /**
      * @notice The protocol fee taken from the performance fee
@@ -133,7 +133,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
         address definitiveStrategyAsset,
         uint256 definitiveProtocolFee
     ) ERC20(definitiveName, definitiveSymbol) ERC4626(IERC20(definitiveAsset)) {
-        if (initialPerformanceFee > MAX_BPS || definitiveProtocolFee > MAX_BPS) {
+        if (initialPerformanceFee > WAD || definitiveProtocolFee > WAD) {
             revert InvalidFee();
         }
         if (
@@ -155,7 +155,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
 
         PROTOCOL_FEE = definitiveProtocolFee;
         STRATEGY_ASSET = definitiveStrategyAsset;
-        DECIMALS_OFFSET = 18.zeroFloorSub(decimals());
+        _DECIMALS_OFFSET = uint256(18).zeroFloorSub(decimals());
 
         _grantRole(DEFAULT_ADMIN_ROLE, initialAdmin);
     }
@@ -163,6 +163,13 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     /*//////////////////////////////////////////////////////////////
                             ERC4626 FUNCTIONS
     //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @inheritdoc ERC4626
+     */
+    function _decimalsOffset() internal view override returns (uint8) {
+        return uint8(_DECIMALS_OFFSET);
+    }
 
     /**
      * @inheritdoc ERC4626
@@ -378,15 +385,20 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
         }
     }
 
-    /// @dev Updates `lastTotalAssets` to `updatedTotalAssets`.
+    /**
+     * @dev Updates `lastTotalAssets` to `updatedTotalAssets`.
+     * @param updatedTotalAssets The new total assets to set
+     */
     function _updateLastTotalAssets(uint256 updatedTotalAssets) internal {
         lastTotalAssets = updatedTotalAssets;
 
         emit UpdateLastTotalAssets(updatedTotalAssets);
     }
 
-    /// @dev Accrues the fee and mints the fee shares to the fee recipient.
-    /// @return newTotalAssets The vaults total assets after accruing the interest.
+    /**
+     * @dev Accrues the fees and mints the fee shares to the fee recipients.
+     * @return newTotalAssets The vault's total assets after accruing the interest.
+     */
     function _accrueFee() internal returns (uint256 newTotalAssets) {
         uint256 protocolFeeShares;
         uint256 integratorFeeShares;
@@ -402,8 +414,10 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
         emit AccrueInterest(newTotalAssets, integratorFeeShares, protocolFeeShares);
     }
 
-    /// @dev Computes and returns the fee shares (`feeShares`) to mint and the new vault's total assets
-    /// (`newTotalAssets`).
+    /**
+     * @dev Computes and returns the fee shares (`feeShares`) to mint and the new vault's total assets
+     * (`newTotalAssets`).
+     */
     function _accruedFeeShares()
         internal
         view
@@ -414,18 +428,18 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
         uint256 totalInterest = newTotalAssets.zeroFloorSub(lastTotalAssets);
         if (totalInterest != 0 && performanceFee != 0) {
             // It is acknowledged that `feeAssets` may be rounded down to 0 if `totalInterest * fee < WAD`.
-            uint256 feeAssets = totalInterest.mulDiv(performanceFee, MAX_BPS);
+            uint256 feeAssets = totalInterest.mulDiv(performanceFee, WAD);
             // The fee assets is subtracted from the total assets in these calculations to compensate for the fact
             // that total assets is already increased by the total interest (including the fee assets).
-            feeShares = _convertToSharesWithTotals(
+            uint256 feeShares = _convertToSharesWithTotals(
                 feeAssets,
                 totalSupply(),
                 newTotalAssets - feeAssets,
                 Math.Rounding.Floor
             );
 
-            protocolFeeShares = feeShares.mulDiv(protocolFee, MAX_BPS);
-            integratorFeeShares = feeShares - protocolFeeShares; // Cannot underflow as protocolFee <= MAX_BPS
+            protocolFeeShares = feeShares.mulDiv(PROTOCOL_FEE, WAD);
+            integratorFeeShares = feeShares - protocolFeeShares; // Cannot underflow as protocolFee <= WAD
         }
     }
 
@@ -452,7 +466,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      * @custom:requires INTEGRATOR_ROLE
      */
     function setPerformanceFee(uint256 newPerformanceFee) external onlyRole(INTEGRATOR_ROLE) {
-        if (newPerformanceFee > MAX_BPS) {
+        if (newPerformanceFee > WAD) {
             revert InvalidFee();
         }
         performanceFee = newPerformanceFee;
@@ -528,7 +542,6 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
         address _asset = asset();
         address _strategyAsset = STRATEGY_ASSET;
 
-        uint256 assetBalance = IERC20(_asset).balanceOf(address(this));
         uint256 strategyAssetBalance = IERC20(_strategyAsset).balanceOf(address(this));
 
         _swap(tokens, callDatas);
