@@ -16,13 +16,10 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - uses: actions/setup-node@v3
+      - name: Setup repo
+        uses: ./.github/actions/setup-repo
         with:
-          node-version: 18
-          cache: "yarn"
-
-      - name: Install dependencies
-        run: yarn install
+          registry-token: ${{ secrets.GH_REGISTRY_ACCESS_TOKEN }}
 
       - name: Run solhint
         run: yarn lint:check
@@ -209,6 +206,11 @@ jobs:
         uses: foundry-rs/foundry-toolchain@v1
         with:
           version: nightly
+
+      - name: Setup repo
+        uses: ./.github/actions/setup-repo
+        with:
+          registry-token: ${{ secrets.GH_REGISTRY_ACCESS_TOKEN }}
 
       - name: Compile foundry
         run: forge build --build-info --force
