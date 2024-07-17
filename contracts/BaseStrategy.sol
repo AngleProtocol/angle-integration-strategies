@@ -50,6 +50,22 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     event AccrueInterest(uint256 newTotalAssets, uint256 integratorFeeShares, uint256 labsFeeShares);
 
     /*//////////////////////////////////////////////////////////////
+                                STRUCTS
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Struct to store the vesting data
+     * @param vestingPeriod The vesting period
+     * @param lastUpdate The last update of the vesting
+     * @param vestingProfit The profit that is locked in the strategy
+     */
+    struct VestingData {
+        uint32 vestingPeriod;
+        uint32 lastUpdate;
+        uint256 vestingProfit;
+    }
+
+    /*//////////////////////////////////////////////////////////////
                                 CONSTANTS
     //////////////////////////////////////////////////////////////*/
 
@@ -77,17 +93,9 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice The profit that is locked in the strategy
+     * @notice The data of the rewards vesting
      */
-    uint256 public vestingProfit;
-    /**
-     * @notice The last time the profit was updated
-     */
-    uint256 public lastUpdate;
-    /**
-     * @notice The vesting period for the profit
-     */
-    uint256 public vestingPeriod;
+    VestingData public vestingData;
     /**
      * @notice The last total assets of the vault
      */
@@ -126,7 +134,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
         address initialAdmin,
         address initialSwapRouter,
         address initialTokenTransferAddress,
-        uint256 initialVestingPeriod,
+        uint32 initialVestingPeriod,
         string memory definitiveName,
         string memory definitiveSymbol,
         address definitiveAsset,
@@ -146,7 +154,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
             revert ZeroAddress();
         }
 
-        vestingPeriod = initialVestingPeriod;
+        vestingData.vestingPeriod = initialVestingPeriod;
         performanceFee = initialPerformanceFee;
         integratorFeeRecipient = initialIntegratorFeeRecipient;
         labsFeeRecipient = initialLabsFeeRecipient;
@@ -346,20 +354,22 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      */
     function lockedProfit() public view virtual returns (uint256) {
         // Get the last update and vesting delay.
-        uint256 _lastUpdate = lastUpdate;
-        uint256 _vestingPeriod = vestingPeriod;
+        VestingData memory _vestingData = vestingData;
 
         unchecked {
             // If the vesting period has passed, there is no locked profit.
             // This cannot overflow on human timescales
-            if (block.timestamp >= _lastUpdate + _vestingPeriod) return 0;
+            if (block.timestamp >= _vestingData.lastUpdate + _vestingData.vestingPeriod) return 0;
 
             // Get the maximum amount we could return.
-            uint256 currentlyVestingProfit = vestingProfit;
+            uint256 currentlyVestingProfit = _vestingData.vestingProfit;
 
             // Compute how much profit remains locked based on the last time a profit was acknowledged
             // and the vesting period. It's impossible for an update to be in the future, so this will never underflow.
-            return currentlyVestingProfit - (currentlyVestingProfit * (block.timestamp - _lastUpdate)) / _vestingPeriod;
+            return
+                currentlyVestingProfit -
+                (currentlyVestingProfit * (block.timestamp - _vestingData.lastUpdate)) /
+                _vestingData.vestingPeriod;
         }
     }
 
@@ -380,8 +390,9 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      */
     function _handleUserGain(uint256 gain) internal virtual {
         if (gain != 0) {
-            vestingProfit = (lockedProfit() + gain);
-            lastUpdate = block.timestamp;
+            VestingData storage _vestingData = vestingData;
+            _vestingData.vestingProfit = (lockedProfit() + gain);
+            _vestingData.lastUpdate = uint32(block.timestamp);
         }
     }
 
@@ -452,10 +463,10 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      * @param newVestingPeriod The new vesting period to set
      * @custom:requires DEFAULT_ADMIN_ROLE
      */
-    function setVestingPeriod(uint256 newVestingPeriod) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setVestingPeriod(uint32 newVestingPeriod) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (newVestingPeriod == 0 || newVestingPeriod > 365 days) revert InvalidParameter();
 
-        vestingPeriod = newVestingPeriod;
+        vestingData.vestingPeriod = newVestingPeriod;
 
         emit VestingPeriodUpdated(newVestingPeriod);
     }

@@ -15,7 +15,7 @@ contract SavingsStrategy is BaseStrategy {
         address initialAdmin,
         address initialSwapRouter,
         address initialTokenTransferAddress,
-        uint256 initialVestingPeriod,
+        uint32 initialVestingPeriod,
         string memory definitiveName,
         string memory definitiveSymbol,
         address definitiveAsset,
