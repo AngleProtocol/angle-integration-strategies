@@ -50,22 +50,6 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     event AccrueInterest(uint256 newTotalAssets, uint256 integratorFeeShares, uint256 labsFeeShares);
 
     /*//////////////////////////////////////////////////////////////
-                                STRUCTS
-    //////////////////////////////////////////////////////////////*/
-
-    /**
-     * @notice Struct to store the vesting data
-     * @param vestingPeriod The vesting period
-     * @param lastUpdate The last update of the vesting
-     * @param vestingProfit The profit that is locked in the strategy
-     */
-    struct VestingData {
-        uint32 vestingPeriod;
-        uint32 lastUpdate;
-        uint256 vestingProfit;
-    }
-
-    /*//////////////////////////////////////////////////////////////
                                 CONSTANTS
     //////////////////////////////////////////////////////////////*/
 
@@ -73,38 +57,45 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     bytes32 public constant INTEGRATOR_ROLE = keccak256("INTEGRATOR_ROLE");
     bytes32 public constant LABS_ROLE = keccak256("LABS_ROLE");
 
-    uint256 public constant WAD = 100_000; // 100%
+    uint32 public constant WAD = 100_000; // 100%
 
+    /**
+     * @notice The offset to convert the decimals
+     */
+    uint8 private immutable _DECIMALS_OFFSET;
     /**
      * @notice The labs fee taken from the performance fee
      */
-    uint256 public immutable LABS_FEE;
+    uint32 public immutable LABS_FEE;
     /**
      * @notice The address of the strategy asset (stUSD for example)
      */
     address public immutable STRATEGY_ASSET;
-    /**
-     * @notice The offset to convert the decimals
-     */
-    uint256 private immutable _DECIMALS_OFFSET;
 
     /*//////////////////////////////////////////////////////////////
                             MUTABLE VARIABLES
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice The data of the rewards vesting
+     * @notice The vesting period of the rewards
      */
-    VestingData public vestingData;
+    uint64 public vestingPeriod;
+    /**
+     * @notice The last update of the vesting
+     */
+    uint64 public lastUpdate;
+    /**
+     * @notice The profit that is locked in the strategy
+     */
+    uint128 public vestingProfit;
     /**
      * @notice The last total assets of the vault
      */
     uint256 public lastTotalAssets;
-
     /**
      * @notice The performance fee taken from the harvested profits from the strategy
      */
-    uint256 public performanceFee;
+    uint32 public performanceFee;
     /**
      * @notice The address that receives the performance fee minus the labs fee
      */
@@ -113,7 +104,6 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      * @notice The address that receives the labs fee from the performance fee
      */
     address public labsFeeRecipient;
-
     /**
      *  @notice Dex/aggregaor router to call to perform swaps
      */
@@ -128,18 +118,18 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     //////////////////////////////////////////////////////////////*/
 
     constructor(
-        uint256 initialPerformanceFee,
+        uint32 initialPerformanceFee,
         address initialIntegratorFeeRecipient,
         address initialLabsFeeRecipient,
         address initialAdmin,
         address initialSwapRouter,
         address initialTokenTransferAddress,
-        uint32 initialVestingPeriod,
+        uint64 initialVestingPeriod,
         string memory definitiveName,
         string memory definitiveSymbol,
         address definitiveAsset,
         address definitiveStrategyAsset,
-        uint256 definitiveLabsFee
+        uint32 definitiveLabsFee
     ) ERC20(definitiveName, definitiveSymbol) ERC4626(IERC20(definitiveAsset)) {
         if (initialPerformanceFee > WAD || definitiveLabsFee > WAD) {
             revert InvalidFee();
@@ -154,7 +144,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
             revert ZeroAddress();
         }
 
-        vestingData.vestingPeriod = initialVestingPeriod;
+        vestingPeriod = initialVestingPeriod;
         performanceFee = initialPerformanceFee;
         integratorFeeRecipient = initialIntegratorFeeRecipient;
         labsFeeRecipient = initialLabsFeeRecipient;
@@ -163,7 +153,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
 
         LABS_FEE = definitiveLabsFee;
         STRATEGY_ASSET = definitiveStrategyAsset;
-        _DECIMALS_OFFSET = uint256(18).zeroFloorSub(decimals());
+        _DECIMALS_OFFSET = uint8(uint256(18).zeroFloorSub(decimals()));
 
         _grantRole(DEFAULT_ADMIN_ROLE, initialAdmin);
     }
@@ -176,7 +166,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      * @inheritdoc ERC4626
      */
     function _decimalsOffset() internal view override returns (uint8) {
-        return uint8(_DECIMALS_OFFSET);
+        return _DECIMALS_OFFSET;
     }
 
     /**
@@ -354,22 +344,20 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      */
     function lockedProfit() public view virtual returns (uint256) {
         // Get the last update and vesting delay.
-        VestingData memory _vestingData = vestingData;
+        uint64 _lastUpdate = lastUpdate;
+        uint64 _vestingPeriod = vestingPeriod;
 
         unchecked {
             // If the vesting period has passed, there is no locked profit.
             // This cannot overflow on human timescales
-            if (block.timestamp >= _vestingData.lastUpdate + _vestingData.vestingPeriod) return 0;
+            if (block.timestamp >= _lastUpdate + _vestingPeriod) return 0;
 
             // Get the maximum amount we could return.
-            uint256 currentlyVestingProfit = _vestingData.vestingProfit;
+            uint256 currentlyVestingProfit = vestingProfit;
 
             // Compute how much profit remains locked based on the last time a profit was acknowledged
             // and the vesting period. It's impossible for an update to be in the future, so this will never underflow.
-            return
-                currentlyVestingProfit -
-                (currentlyVestingProfit * (block.timestamp - _vestingData.lastUpdate)) /
-                _vestingData.vestingPeriod;
+            return currentlyVestingProfit - (currentlyVestingProfit * (block.timestamp - _lastUpdate)) / _vestingPeriod;
         }
     }
 
@@ -390,9 +378,8 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      */
     function _handleUserGain(uint256 gain) internal virtual {
         if (gain != 0) {
-            VestingData storage _vestingData = vestingData;
-            _vestingData.vestingProfit = (lockedProfit() + gain);
-            _vestingData.lastUpdate = uint32(block.timestamp);
+            vestingProfit = uint128(lockedProfit() + gain);
+            lastUpdate = uint32(block.timestamp);
         }
     }
 
@@ -463,10 +450,10 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      * @param newVestingPeriod The new vesting period to set
      * @custom:requires DEFAULT_ADMIN_ROLE
      */
-    function setVestingPeriod(uint32 newVestingPeriod) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setVestingPeriod(uint64 newVestingPeriod) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (newVestingPeriod == 0 || newVestingPeriod > 365 days) revert InvalidParameter();
 
-        vestingData.vestingPeriod = newVestingPeriod;
+        vestingPeriod = newVestingPeriod;
 
         emit VestingPeriodUpdated(newVestingPeriod);
     }
@@ -476,7 +463,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      * @param newPerformanceFee The new performance fee to set
      * @custom:requires INTEGRATOR_ROLE
      */
-    function setPerformanceFee(uint256 newPerformanceFee) external onlyRole(INTEGRATOR_ROLE) {
+    function setPerformanceFee(uint32 newPerformanceFee) external onlyRole(INTEGRATOR_ROLE) {
         if (newPerformanceFee > WAD) {
             revert InvalidFee();
         }
