@@ -554,16 +554,19 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
         address _strategyAsset = STRATEGY_ASSET;
 
         uint256 strategyAssetBalance = IERC20(_strategyAsset).balanceOf(address(this));
+        uint256 assetBalance = IERC20(_asset).balanceOf(address(this));
 
         _swap(tokens, callDatas);
 
         uint256 newAssetBalance = IERC20(_asset).balanceOf(address(this));
+        if (newAssetBalance < assetBalance) {
+            revert OutgoingAssets();
+        }
 
         _handleUserGain(newAssetBalance);
         _afterDeposit(newAssetBalance);
 
         uint256 newStrategyAssetBalance = IERC20(_strategyAsset).balanceOf(address(this));
-
         if (newStrategyAssetBalance < strategyAssetBalance) {
             revert OutgoingAssets();
         }
