@@ -54,7 +54,8 @@ contract ERC4626Strategy is BaseStrategy {
      * @inheritdoc ERC4626
      */
     function maxMint(address) public view override returns (uint256) {
-        return ERC4626(STRATEGY_ASSET).maxMint(address(this));
+        // We need to convert the total supply of the strategy asset to the total supply of the strategy
+        return (ERC4626(STRATEGY_ASSET).maxMint(address(this)) * totalSupply()) / ERC4626(STRATEGY_ASSET).totalSupply();
     }
 
     /**
@@ -72,6 +73,11 @@ contract ERC4626Strategy is BaseStrategy {
      * @inheritdoc ERC4626
      */
     function maxRedeem(address owner) public view override returns (uint256) {
-        return Math.min(balanceOf(owner), ERC4626(STRATEGY_ASSET).maxRedeem(address(this)));
+        return
+            Math.min(
+                balanceOf(owner),
+                (ERC4626(STRATEGY_ASSET).maxRedeem(address(this)) * totalSupply()) /
+                    ERC4626(STRATEGY_ASSET).totalSupply()
+            );
     }
 }
