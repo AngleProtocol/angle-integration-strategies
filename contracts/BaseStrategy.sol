@@ -539,16 +539,21 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      * @notice Swap tokens using the router/aggregator + vest the profit
      * @param tokens array of tokens to swap
      * @param callDatas array of bytes to call the router/aggregator
+     * @param amounts array of amounts to swap
      * @custom:requires KEEPER_ROLE
      */
-    function swap(address[] calldata tokens, bytes[] calldata callDatas) public onlyRole(KEEPER_ROLE) {
+    function swap(
+        address[] calldata tokens,
+        bytes[] calldata callDatas,
+        uint256[] calldata amounts
+    ) public onlyRole(KEEPER_ROLE) {
         address _asset = asset();
         address _strategyAsset = STRATEGY_ASSET;
 
         uint256 strategyAssetBalance = IERC20(_strategyAsset).balanceOf(address(this));
         uint256 assetBalance = IERC20(_asset).balanceOf(address(this));
 
-        _swap(tokens, callDatas);
+        _swap(tokens, callDatas, amounts);
 
         uint256 newAssetBalance = IERC20(_asset).balanceOf(address(this));
         if (newAssetBalance < assetBalance) {
@@ -568,11 +573,12 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      * @notice Swap tokens using the router/aggregator
      * @param tokens array of tokens to swap
      * @param callDatas array of bytes to call the router/aggregator
+     * @param amounts array of amounts to swap
      */
-    function _swap(address[] calldata tokens, bytes[] calldata callDatas) internal {
+    function _swap(address[] calldata tokens, bytes[] calldata callDatas, uint256[] calldata amounts) internal {
         uint256 length = tokens.length;
         for (uint256 i; i < length; ++i) {
-            _approveTokenIfNeeded(tokens[i], tokenTransferAddress);
+            _approveTokenIfNeeded(tokens[i], tokenTransferAddress, amounts[i]);
             _performRouterSwap(callDatas[i]);
         }
     }
@@ -596,12 +602,14 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
 
     /**
      * @notice Approve the router/aggregator to spend the token if needed
-     * @param _token address of the token to approve
-     * @param _spender address of the router/aggregator
+     * @param token address of the token to approve
+     * @param spender address of the router/aggregator
+     * @param amount amount to approve
      */
-    function _approveTokenIfNeeded(address _token, address _spender) internal {
-        if (ERC20(_token).allowance(address(this), _spender) == 0) {
-            IERC20(_token).approve(_spender, type(uint256).max);
+    function _approveTokenIfNeeded(address token, address spender, uint256 amount) internal {
+        uint256 allowance = IERC20(token).allowance(address(this), spender);
+        if (allowance < amount) {
+            IERC20(token).safeIncreaseAllowance(spender, amount - allowance);
         }
     }
 
