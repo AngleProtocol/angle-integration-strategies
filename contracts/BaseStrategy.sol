@@ -70,7 +70,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     /**
      * @notice The offset to convert the decimals
      */
-    uint256 private immutable DECIMALS_OFFSET;
+    uint256 private immutable _DECIMALS_OFFSET;
 
     /*//////////////////////////////////////////////////////////////
                             MUTABLE VARIABLES
@@ -350,8 +350,8 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
             // Get the maximum amount we could return.
             uint256 currentlyVestingProfit = vestingProfit;
 
-            // Compute how much profit remains locked based on the last time a profit was acknowledged and the vesting period
-            // It's impossible for an update to be in the future, so this will never underflow.
+            // Compute how much profit remains locked based on the last time a profit was acknowledged
+            // and the vesting period. It's impossible for an update to be in the future, so this will never underflow.
             return currentlyVestingProfit - (currentlyVestingProfit * (block.timestamp - _lastUpdate)) / _vestingPeriod;
         }
     }
