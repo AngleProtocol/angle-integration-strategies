@@ -59,10 +59,12 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      * @param lastUpdate The last update of the vesting
      * @param vestingProfit The profit that is locked in the strategy
      */
+    // TODO: you don't need to put this in a struct -> like you can pack variables differently just by defining
+    // them one below the other and make sure it fits in only one storage slot
     struct VestingData {
-        uint32 vestingPeriod;
-        uint32 lastUpdate;
-        uint256 vestingProfit;
+        uint64 vestingPeriod;
+        uint64 lastUpdate;
+        uint128 vestingProfit;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -78,6 +80,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     /**
      * @notice The labs fee taken from the performance fee
      */
+    // Let's not make this one immutable and cap it and
     uint256 public immutable LABS_FEE;
     /**
      * @notice The address of the strategy asset (stUSD for example)
@@ -437,6 +440,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
         newTotalAssets = totalAssets();
 
         uint256 totalInterest = newTotalAssets.zeroFloorSub(lastTotalAssets);
+        // Here you can cache performanceFee in an intermediary variable so we don't tap into the storage variable twice
         if (totalInterest != 0 && performanceFee != 0) {
             // It is acknowledged that `feeAssets` may be rounded down to 0 if `totalInterest * fee < WAD`.
             uint256 feeAssets = totalInterest.mulDiv(performanceFee, WAD);
@@ -556,7 +560,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
         uint256 strategyAssetBalance = IERC20(_strategyAsset).balanceOf(address(this));
 
         _swap(tokens, callDatas);
-
+        // Need checks on assetBalance not decreasing here
         uint256 newAssetBalance = IERC20(_asset).balanceOf(address(this));
 
         _handleUserGain(newAssetBalance);

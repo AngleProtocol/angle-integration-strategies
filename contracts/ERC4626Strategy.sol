@@ -96,6 +96,8 @@ contract ERC4626Strategy is BaseStrategy {
      * @inheritdoc ERC4626
      */
     function maxRedeem(address owner) public view override returns (uint256) {
+        // I don't think this is accurate here as the unit of the shares of the strategy assets are not always the
+        // same as the units of the strategy
         return Math.min(balanceOf(owner), ERC4626(STRATEGY_ASSET).maxRedeem(address(this)));
     }
 }
