@@ -8,10 +8,10 @@ import { UtilsLib } from "morpho/libraries/UtilsLib.sol";
 import "./utils/Errors.sol";
 
 /// @title BaseStrategy
-/// @author AngleLabs
+/// @author Angle Labs, Inc.
 /// @notice Abstract contract to proxy the interaction with an strategy while taking performance fees
-/// @dev This contract is using MetaMorpho as a base for the ERC4626 logic with an extra vesting logic and extra fee
-/// https://github.com/morpho-org/metamorpho/blob/main/src/MetaMorpho.sol
+/// @dev This contract is using the MetaMorpho codebase as a base for the ERC4626 logic with an extra vesting logic
+/// and extra fee: https://github.com/morpho-org/metamorpho/blob/main/src/MetaMorpho.sol
 abstract contract BaseStrategy is ERC4626, AccessControl {
     using SafeERC20 for IERC20;
     using UtilsLib for uint256;
@@ -250,7 +250,6 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
         uint256 newTotalAssets = _accrueFee();
 
         // Do not call expensive `maxWithdraw` and optimistically withdraw assets.
-
         shares = _convertToSharesWithTotals(assets, totalSupply(), newTotalAssets, Math.Rounding.Ceil);
 
         // `newTotalAssets - assets` may be a little off from `totalAssets()`.
@@ -266,7 +265,6 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
         uint256 newTotalAssets = _accrueFee();
 
         // Do not call expensive `maxRedeem` and optimistically redeem shares.
-
         assets = _convertToAssetsWithTotals(shares, totalSupply(), newTotalAssets, Math.Rounding.Floor);
 
         // `newTotalAssets - assets` may be a little off from `totalAssets()`.
@@ -460,10 +458,10 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     {
         newTotalAssets = totalAssets();
 
-        uint256 totalInterest = newTotalAssets.zeroFloorSub(lastTotalAssets);
-        if (totalInterest != 0 && performanceFee != 0) {
-            // It is acknowledged that `feeAssets` may be rounded down to 0 if `totalInterest * fee < WAD`.
-            uint256 feeAssets = totalInterest.mulDiv(performanceFee, WAD);
+        // `newTotalAssets.zeroFloorSub(lastTotalAssets)` is the value of the total interest earned by the strategy.
+        // `feeAssets` may be rounded down to 0 if `totalInterest * fee < WAD`.
+        uint256 feeAssets = (newTotalAssets.zeroFloorSub(lastTotalAssets)).mulDiv(performanceFee, WAD);
+        if (feeAssets != 0) {
             // The fee assets is subtracted from the total assets in these calculations to compensate for the fact
             // that total assets is already increased by the total interest (including the fee assets).
             uint256 feeShares = _convertToSharesWithTotals(

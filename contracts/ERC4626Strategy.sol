@@ -4,7 +4,7 @@ pragma solidity 0.8.26;
 import { BaseStrategy, ERC4626, Math } from "./BaseStrategy.sol";
 
 /// @title ERC4626Strategy
-/// @author AngleLabs
+/// @author Angle Labs, Inc.
 /// @notice Strategy contract implementing the logic to interact with an ERC4626 asset
 contract ERC4626Strategy is BaseStrategy {
     /*//////////////////////////////////////////////////////////////
@@ -36,7 +36,8 @@ contract ERC4626Strategy is BaseStrategy {
      * @dev it works only for ERC4626 with infinite liquidity (stUSD or MetaMorpho like)
      */
     function _assetsHeld() internal view override returns (uint256) {
-        return ERC4626(STRATEGY_ASSET).convertToAssets(ERC4626(STRATEGY_ASSET).balanceOf(address(this)));
+        address _strategyAsset = STRATEGY_ASSET;
+        return ERC4626(_strategyAsset).convertToAssets(ERC4626(_strategyAsset).balanceOf(address(this)));
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -46,38 +47,34 @@ contract ERC4626Strategy is BaseStrategy {
     /**
      * @inheritdoc ERC4626
      */
-    function maxDeposit(address) public view override returns (uint256) {
+    function maxDeposit(address user) public view override returns (uint256) {
         return ERC4626(STRATEGY_ASSET).maxDeposit(address(this));
     }
 
     /**
      * @inheritdoc ERC4626
+     * @dev might overflow (in this case, the user should be able to mint the type(uint256).max)
      */
-    function maxMint(address) public view override returns (uint256) {
-        // We need to convert the total supply of the strategy asset to the total supply of the strategy
-        return (ERC4626(STRATEGY_ASSET).maxMint(address(this)) * totalSupply()) / ERC4626(STRATEGY_ASSET).totalSupply();
+    function maxMint(address user) public view override returns (uint256) {
+        return _convertToShares(ERC4626(STRATEGY_ASSET).maxDeposit(address(this)), Math.Rounding.Floor);
     }
 
     /**
      * @inheritdoc ERC4626
      */
-    function maxWithdraw(address owner) public view override returns (uint256) {
+    function maxWithdraw(address user) public view override returns (uint256) {
         return
             Math.min(
-                _convertToAssets(balanceOf(owner), Math.Rounding.Floor),
+                _convertToAssets(balanceOf(user), Math.Rounding.Floor),
                 ERC4626(STRATEGY_ASSET).maxWithdraw(address(this))
             );
     }
 
     /**
      * @inheritdoc ERC4626
+     * @dev might overflow (in this case, the user should be able to redeem the type(uint256).max)))
      */
-    function maxRedeem(address owner) public view override returns (uint256) {
-        return
-            Math.min(
-                balanceOf(owner),
-                (ERC4626(STRATEGY_ASSET).maxRedeem(address(this)) * totalSupply()) /
-                    ERC4626(STRATEGY_ASSET).totalSupply()
-            );
+    function maxRedeem(address user) public view override returns (uint256) {
+        return _convertToShares(maxWithdraw(user), Math.Rounding.Floor);
     }
 }
