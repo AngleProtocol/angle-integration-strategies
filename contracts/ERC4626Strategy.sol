@@ -47,7 +47,7 @@ contract ERC4626Strategy is BaseStrategy {
     /**
      * @inheritdoc ERC4626
      */
-    function maxDeposit(address user) public view override returns (uint256) {
+    function maxDeposit(address) public view override returns (uint256) {
         return ERC4626(STRATEGY_ASSET).maxDeposit(address(this));
     }
 
@@ -55,7 +55,7 @@ contract ERC4626Strategy is BaseStrategy {
      * @inheritdoc ERC4626
      * @dev might overflow (in this case, the user should be able to mint the type(uint256).max)
      */
-    function maxMint(address user) public view override returns (uint256) {
+    function maxMint(address) public view override returns (uint256) {
         return _convertToShares(ERC4626(STRATEGY_ASSET).maxDeposit(address(this)), Math.Rounding.Floor);
     }
 
