@@ -162,7 +162,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     constructor(
         ConstructorArgs memory args
     ) ERC20(args.definitiveName, args.definitiveSymbol) ERC4626(IERC20(args.definitiveAsset)) {
-        if (args.initialPerformanceFee > WAD || args.initialDeveloperFee > WAD || args.initialDeveloperFee > MAX_FEE) {
+        if (args.initialPerformanceFee > WAD || args.initialDeveloperFee > MAX_FEE) {
             revert InvalidFee();
         }
         if (
@@ -170,6 +170,9 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
             args.initialDeveloperFeeRecipient == address(0) ||
             args.initialSwapRouter == address(0) ||
             args.initialTokenTransferAddress == address(0) ||
+            args.initialKeeper == address(0) ||
+            args.initialDeveloper == address(0) ||
+            args.initialIntegrator == address(0) ||
             args.definitiveStrategyAsset == address(0)
         ) {
             revert ZeroAddress();
@@ -513,7 +516,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      * @custom:requires DEVELOPER_ROLE
      */
     function setDeveloperFee(uint32 newDeveloperFee) external onlyRole(DEVELOPER_ROLE) {
-        if (newDeveloperFee > WAD || newDeveloperFee > performanceFee) {
+        if (newDeveloperFee > MAX_FEE) {
             revert InvalidFee();
         }
         developerFee = newDeveloperFee;
