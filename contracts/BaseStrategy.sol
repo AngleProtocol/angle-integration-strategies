@@ -582,6 +582,8 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      * @param callDatas array of bytes to call the router/aggregator
      * @param amounts array of amounts to swap
      * @custom:requires KEEPER_ROLE
+     *
+     * @dev the assets which are getting vested yield rewards for the whole streategy
      */
     function swap(
         address[] calldata tokens,
