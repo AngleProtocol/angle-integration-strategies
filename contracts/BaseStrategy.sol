@@ -213,7 +213,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      * @inheritdoc ERC4626
      */
     function totalAssets() public view override returns (uint256) {
-        return _assetsHeld() - lockedProfit();
+        return _assetsHeld().zeroFloorSub(lockedProfit()); // handle rounding down of assets
     }
 
     /**
@@ -489,8 +489,6 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      * @custom:requires INTEGRATOR_ROLE
      */
     function setVestingPeriod(uint64 newVestingPeriod) external onlyRole(INTEGRATOR_ROLE) {
-        if (newVestingPeriod == 0 || newVestingPeriod > 365 days) revert InvalidParameter();
-
         vestingPeriod = newVestingPeriod;
 
         emit VestingPeriodUpdated(newVestingPeriod);
