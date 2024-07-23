@@ -189,6 +189,9 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
         STRATEGY_ASSET = args.definitiveStrategyAsset;
         _DECIMALS_OFFSET = uint8(uint256(18).zeroFloorSub(decimals()));
 
+        // give allowance
+        IERC20(args.definitiveAsset).safeIncreaseAllowance(args.definitiveStrategyAsset, type(uint256).max);
+
         // Roles managment
         _grantRole(KEEPER_ROLE, args.initialKeeper);
         _grantRole(DEVELOPER_ROLE, args.initialDeveloper);
