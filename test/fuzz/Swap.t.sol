@@ -56,10 +56,7 @@ contract SwapFuzzTest is ERC4626StrategyTest {
 
             assertEq(strategy.vestingProfit(), lockedProfit + amountOuts[i]);
             assertEq(strategy.lastUpdate(), block.timestamp);
-            assertEq(
-                strategy.lockedProfit(),
-                strategy.vestingProfit() + (lastLockedProfit * timeOffsets[i]) / strategy.vestingPeriod()
-            );
+            assertEq(strategy.lockedProfit(), strategy.vestingProfit());
             assertEq(
                 strategy.totalAssets(),
                 ERC4626(strategyAsset)
@@ -70,6 +67,13 @@ contract SwapFuzzTest is ERC4626StrategyTest {
             lastLockedProfit = strategy.lockedProfit();
 
             vm.warp(block.timestamp + timeOffsets[i]);
+
+            assertEq(
+                strategy.lockedProfit(),
+                timeOffsets[i] > strategy.vestingPeriod()
+                    ? 0
+                    : lastLockedProfit - (lastLockedProfit * timeOffsets[i]) / strategy.vestingPeriod()
+            );
         }
     }
 }
