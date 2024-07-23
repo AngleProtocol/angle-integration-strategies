@@ -67,7 +67,6 @@ contract DepositTest is ERC4626StrategyTest {
 
         vm.mockCall(strategyAsset, abi.encodeWithSelector(IERC20.balanceOf.selector), abi.encode(9e18));
         uint256 previewedDeposit = strategy.previewDeposit(100e18);
-        uint256 previousBalance = ERC4626(strategyAsset).balanceOf(address(strategy));
 
         vm.prank(alice);
         vm.mockCall(strategyAsset, abi.encodeWithSelector(IERC20.balanceOf.selector), abi.encode(9e18));

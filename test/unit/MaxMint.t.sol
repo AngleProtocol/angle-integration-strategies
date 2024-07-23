@@ -4,7 +4,7 @@ pragma solidity 0.8.26;
 import "../ERC4626StrategyTest.t.sol";
 
 contract MaxMintTest is ERC4626StrategyTest {
-    function test_MaxMint_Normal() public {
+    function test_MaxMint_Normal() public view {
         assertEq(strategy.maxMint(alice), ERC4626(strategyAsset).maxMint(address(strategy)));
     }
 

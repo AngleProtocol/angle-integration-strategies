@@ -19,10 +19,6 @@ contract RedeemFuzzTest is ERC4626StrategyTest {
 
         for (uint256 i = 0; i < 5; i++) {
             uint256 previousBalance = strategy.balanceOf(alice);
-
-            uint256 totalAssets = strategy.totalAssets();
-            uint256 lastTotalAssets = strategy.lastTotalAssets();
-
             uint256 previousAssetBalance = IERC20(asset).balanceOf(alice);
 
             vm.startPrank(alice);

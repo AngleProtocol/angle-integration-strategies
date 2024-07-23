@@ -35,8 +35,6 @@ contract AccumulateTest is ERC4626StrategyTest {
         IERC20(asset).approve(address(strategy), 100e18);
         strategy.deposit(100e18, alice);
         vm.stopPrank();
-        uint256 balance = ERC4626(strategyAsset).balanceOf(address(strategy));
-        uint256 lastTotalAssets = strategy.lastTotalAssets();
         vm.warp(block.timestamp + 1 weeks);
 
         vm.mockCall(strategyAsset, abi.encodeWithSelector(IERC20.balanceOf.selector), abi.encode(9e18));

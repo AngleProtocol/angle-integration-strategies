@@ -67,7 +67,7 @@ contract SwapFuzzTest is ERC4626StrategyTest {
                     .zeroFloorSub(strategy.lockedProfit())
             );
 
-            uint256 lastLockedProfit = strategy.lockedProfit();
+            lastLockedProfit = strategy.lockedProfit();
 
             vm.warp(block.timestamp + timeOffsets[i]);
         }

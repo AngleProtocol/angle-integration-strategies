@@ -4,7 +4,7 @@ pragma solidity 0.8.26;
 import "../ERC4626StrategyTest.t.sol";
 
 contract ConstructorTest is ERC4626StrategyTest {
-    function test_constructor_Normal() public {
+    function test_constructor_Normal() public view {
         assertEq(strategy.vestingPeriod(), 1 weeks);
         assertEq(strategy.performanceFee(), 10_000);
         assertEq(strategy.developerFee(), 20_000);
@@ -19,7 +19,7 @@ contract ConstructorTest is ERC4626StrategyTest {
         assertEq(strategy.lockedProfit(), 0);
     }
 
-    function test_constructor_CorrectRoles() public {
+    function test_constructor_CorrectRoles() public view {
         assertTrue(strategy.hasRole(strategy.DEVELOPER_ROLE(), developer));
         assertTrue(strategy.hasRole(strategy.INTEGRATOR_ROLE(), integrator));
         assertTrue(strategy.hasRole(strategy.KEEPER_ROLE(), keeper));
