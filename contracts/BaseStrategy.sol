@@ -98,7 +98,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     bytes32 public constant INTEGRATOR_ROLE = keccak256("INTEGRATOR_ROLE");
     bytes32 public constant DEVELOPER_ROLE = keccak256("DEVELOPER_ROLE");
 
-    uint32 public constant WAD = 100_000; // 100%
+    uint32 public constant BPS = 100_000; // 100%
     uint32 public constant MAX_FEE = 50_000; // 50%
 
     /**
@@ -162,7 +162,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     constructor(
         ConstructorArgs memory args
     ) ERC20(args.definitiveName, args.definitiveSymbol) ERC4626(IERC20(args.definitiveAsset)) {
-        if (args.initialPerformanceFee > WAD || args.initialDeveloperFee > MAX_FEE) {
+        if (args.initialPerformanceFee > BPS || args.initialDeveloperFee > MAX_FEE) {
             revert InvalidFee();
         }
         if (
@@ -465,8 +465,8 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
         newTotalAssets = totalAssets();
 
         // `newTotalAssets.zeroFloorSub(lastTotalAssets)` is the value of the total interest earned by the strategy.
-        // `feeAssets` may be rounded down to 0 if `totalInterest * fee < WAD`.
-        uint256 feeAssets = (newTotalAssets.zeroFloorSub(lastTotalAssets)).mulDiv(performanceFee, WAD);
+        // `feeAssets` may be rounded down to 0 if `totalInterest * fee < BPS`.
+        uint256 feeAssets = (newTotalAssets.zeroFloorSub(lastTotalAssets)).mulDiv(performanceFee, BPS);
         if (feeAssets != 0) {
             // The fee assets is subtracted from the total assets in these calculations to compensate for the fact
             // that total assets is already increased by the total interest (including the fee assets).
@@ -477,8 +477,8 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
                 Math.Rounding.Floor
             );
 
-            developerFeeShares = feeShares.mulDiv(developerFee, WAD);
-            integratorFeeShares = feeShares - developerFeeShares; // Cannot underflow as developerFee <= WAD
+            developerFeeShares = feeShares.mulDiv(developerFee, BPS);
+            integratorFeeShares = feeShares - developerFeeShares; // Cannot underflow as developerFee <= BPS
         }
     }
 
@@ -503,7 +503,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      * @custom:requires INTEGRATOR_ROLE
      */
     function setPerformanceFee(uint32 newPerformanceFee) external onlyRole(INTEGRATOR_ROLE) {
-        if (newPerformanceFee > WAD) {
+        if (newPerformanceFee > BPS) {
             revert InvalidFee();
         }
         performanceFee = newPerformanceFee;
