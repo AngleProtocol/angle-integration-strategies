@@ -6,10 +6,10 @@ import "../ERC4626StrategyTest.t.sol";
 contract SetPerformanceFeeTest is ERC4626StrategyTest {
     function test_setPerformanceFee_Success() public {
         vm.expectEmit(true, true, true, true);
-        emit BaseStrategy.PerformanceFeeUpdated(10_000);
+        emit BaseStrategy.PerformanceFeeUpdated(1_000);
         vm.prank(integrator);
-        strategy.setPerformanceFee(10_000);
-        assertEq(strategy.performanceFee(), 10_000);
+        strategy.setPerformanceFee(1_000);
+        assertEq(strategy.performanceFee(), 1_000);
     }
 
     function test_setPerformanceFee_NotIntegrator() public {
@@ -21,12 +21,12 @@ contract SetPerformanceFeeTest is ERC4626StrategyTest {
             )
         );
         vm.prank(bob);
-        strategy.setPerformanceFee(10_000);
+        strategy.setPerformanceFee(1_000);
     }
 
     function test_setPerformanceFee_InvalidFee() public {
         vm.expectRevert(InvalidFee.selector);
         vm.prank(integrator);
-        strategy.setPerformanceFee(100_001);
+        strategy.setPerformanceFee(10_001);
     }
 }

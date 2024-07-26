@@ -22,8 +22,8 @@ contract ERC4626StrategyTest is BaseTest {
 
         strategy = new ERC4626Strategy(
             BaseStrategy.ConstructorArgs(
-                10000, // 10%
-                20000, // 20%
+                1_000, // 10%
+                2_000, // 20%
                 integrator,
                 developer,
                 keeper,

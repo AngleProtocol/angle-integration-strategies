@@ -24,8 +24,8 @@ contract DeployERC4626Strategy is Script, CommonUtils {
         address developer = _chainToContract(chainId, ContractType.GuardianMultisig);
         address keeper = 0xa9bbbDDe822789F123667044443dc7001fb43C01;
 
-        uint32 performanceFee = 10000; // 10%
-        uint32 developerFee = 20000; // 20%
+        uint32 performanceFee = 1_000; // 10%
+        uint32 developerFee = 2_000; // 20%
 
         string memory name = "stUSD Strategy";
         string memory symbol = "stUSDStrat";
