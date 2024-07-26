@@ -17,7 +17,7 @@ contract RedeemTest is ERC4626StrategyTest {
         vm.warp(block.timestamp + 1 weeks);
     }
 
-    function test_Redeem_Normal() public {
+    function test_Redeem_Success() public {
         uint256 previousBalance = strategy.balanceOf(alice);
 
         uint256 totalAssets = strategy.totalAssets();

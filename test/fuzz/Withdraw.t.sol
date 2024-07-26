@@ -7,7 +7,7 @@ import "../ERC4626StrategyTest.t.sol";
 contract WithdrawFuzzTest is ERC4626StrategyTest {
     using UtilsLib for uint256;
 
-    function testFuzz_Withdraw_Normal(uint256[5] memory amounts) public {
+    function testFuzz_Withdraw_Success(uint256[5] memory amounts) public {
         uint256 totalAmounts;
         for (uint256 i = 0; i < 5; i++) {
             amounts[i] = bound(amounts[i], 1e18, 1e21);

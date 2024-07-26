@@ -4,7 +4,7 @@ pragma solidity 0.8.26;
 import "../ERC4626StrategyTest.t.sol";
 
 contract AccumulateTest is ERC4626StrategyTest {
-    function test_accumulate_Normal() public {
+    function test_accumulate_Success() public {
         deal(asset, alice, 100e18);
 
         vm.startPrank(alice);

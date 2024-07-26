@@ -4,7 +4,7 @@ pragma solidity 0.8.26;
 import "../ERC4626StrategyTest.t.sol";
 
 contract SetDeveloperFeeRecipientTest is ERC4626StrategyTest {
-    function test_setDeveloperFeeRecipient_Normal() public {
+    function test_setDeveloperFeeRecipient_Success() public {
         vm.expectEmit(true, true, true, true);
         emit BaseStrategy.DeveloperFeeRecipientUpdated(alice);
         vm.prank(developer);

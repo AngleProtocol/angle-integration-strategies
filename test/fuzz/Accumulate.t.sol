@@ -7,7 +7,7 @@ import "../ERC4626StrategyTest.t.sol";
 contract AccumulateFuzzTest is ERC4626StrategyTest {
     using UtilsLib for uint256;
 
-    function testFuzz_accumulate_Normal(
+    function testFuzz_accumulate_Success(
         uint256 depositAmount,
         uint256[5] memory timeOffsets,
         uint256[5] memory balances

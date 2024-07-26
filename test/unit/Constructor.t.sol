@@ -4,7 +4,7 @@ pragma solidity 0.8.26;
 import "../ERC4626StrategyTest.t.sol";
 
 contract ConstructorTest is ERC4626StrategyTest {
-    function test_constructor_Normal() public view {
+    function test_constructor_Success() public view {
         assertEq(strategy.vestingPeriod(), 1 weeks);
         assertEq(strategy.performanceFee(), 10_000);
         assertEq(strategy.developerFee(), 20_000);

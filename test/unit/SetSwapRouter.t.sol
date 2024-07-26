@@ -4,7 +4,7 @@ pragma solidity 0.8.26;
 import "../ERC4626StrategyTest.t.sol";
 
 contract SetSwapRouterTest is ERC4626StrategyTest {
-    function test_setSwapRouter_Normal() public {
+    function test_setSwapRouter_Success() public {
         vm.expectEmit(true, true, true, true);
         emit BaseStrategy.SwapRouterUpdated(alice);
         vm.prank(developer);

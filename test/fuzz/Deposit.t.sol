@@ -4,7 +4,7 @@ pragma solidity 0.8.26;
 import "../ERC4626StrategyTest.t.sol";
 
 contract DepositFuzzTest is ERC4626StrategyTest {
-    function testFuzz_Deposit_Normal(uint256[5] memory amounts) public {
+    function testFuzz_Deposit_Success(uint256[5] memory amounts) public {
         for (uint256 i = 0; i < 5; i++) {
             amounts[i] = bound(amounts[i], 1e18, 1e21);
             deal(asset, alice, amounts[i]);

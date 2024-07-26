@@ -17,7 +17,7 @@ contract WithdrawTest is ERC4626StrategyTest {
         vm.warp(block.timestamp + 1 weeks);
     }
 
-    function test_Withdraw_Normal() public {
+    function test_Withdraw_Success() public {
         uint256 previousBalance = strategy.balanceOf(alice);
         uint256 assets = strategy.convertToAssets(previousBalance);
 

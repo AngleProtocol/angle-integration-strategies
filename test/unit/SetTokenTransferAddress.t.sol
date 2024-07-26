@@ -4,7 +4,7 @@ pragma solidity 0.8.26;
 import "../ERC4626StrategyTest.t.sol";
 
 contract SetTokenTransferAddressTest is ERC4626StrategyTest {
-    function test_setTokenTransferAddress_Normal() public {
+    function test_setTokenTransferAddress_Success() public {
         vm.expectEmit(true, true, true, true);
         emit BaseStrategy.TokenTransferAddressUpdated(alice);
         vm.prank(developer);

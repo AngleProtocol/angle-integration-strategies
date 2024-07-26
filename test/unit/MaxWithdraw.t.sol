@@ -4,7 +4,7 @@ pragma solidity 0.8.26;
 import "../ERC4626StrategyTest.t.sol";
 
 contract MaxWithdrawTest is ERC4626StrategyTest {
-    function test_MaxWithdraw_Normal() public {
+    function test_MaxWithdraw_Success() public {
         deal(asset, alice, 100e18);
 
         vm.startPrank(alice);

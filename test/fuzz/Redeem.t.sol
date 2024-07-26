@@ -4,7 +4,7 @@ pragma solidity 0.8.26;
 import "../ERC4626StrategyTest.t.sol";
 
 contract RedeemFuzzTest is ERC4626StrategyTest {
-    function testFuzz_Redeem_Normal(uint256[5] memory amounts) public {
+    function testFuzz_Redeem_Success(uint256[5] memory amounts) public {
         uint256 totalAmounts;
         for (uint256 i = 0; i < 5; i++) {
             amounts[i] = bound(amounts[i], 1e18, 1e21);

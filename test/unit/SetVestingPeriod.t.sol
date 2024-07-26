@@ -4,7 +4,7 @@ pragma solidity 0.8.26;
 import "../ERC4626StrategyTest.t.sol";
 
 contract SetVestingPeriodTest is ERC4626StrategyTest {
-    function test_setVestingPeriod_Normal() public {
+    function test_setVestingPeriod_Success() public {
         vm.expectEmit(true, true, true, true);
         emit BaseStrategy.VestingPeriodUpdated(2 weeks);
         vm.prank(integrator);

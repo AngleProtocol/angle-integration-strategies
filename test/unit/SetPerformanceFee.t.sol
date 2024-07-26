@@ -4,7 +4,7 @@ pragma solidity 0.8.26;
 import "../ERC4626StrategyTest.t.sol";
 
 contract SetPerformanceFeeTest is ERC4626StrategyTest {
-    function test_setPerformanceFee_Normal() public {
+    function test_setPerformanceFee_Success() public {
         vm.expectEmit(true, true, true, true);
         emit BaseStrategy.PerformanceFeeUpdated(10_000);
         vm.prank(integrator);

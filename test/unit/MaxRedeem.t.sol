@@ -4,7 +4,7 @@ pragma solidity 0.8.26;
 import "../ERC4626StrategyTest.t.sol";
 
 contract MaxRedeemTest is ERC4626StrategyTest {
-    function test_MaxRedeem_Normal() public {
+    function test_MaxRedeem_Success() public {
         deal(asset, alice, 100e18);
 
         vm.startPrank(alice);

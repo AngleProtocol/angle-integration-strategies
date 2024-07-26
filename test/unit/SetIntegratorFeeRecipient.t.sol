@@ -4,7 +4,7 @@ pragma solidity 0.8.26;
 import "../ERC4626StrategyTest.t.sol";
 
 contract SetIntegratorFeeRecipientTest is ERC4626StrategyTest {
-    function test_setIntegratorFeeRecipient_Normal() public {
+    function test_setIntegratorFeeRecipient_Success() public {
         vm.expectEmit(true, true, true, true);
         emit BaseStrategy.IntegratorFeeRecipientUpdated(alice);
         vm.prank(integrator);
