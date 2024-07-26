@@ -98,7 +98,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     bytes32 public constant INTEGRATOR_ROLE = keccak256("INTEGRATOR_ROLE");
     bytes32 public constant DEVELOPER_ROLE = keccak256("DEVELOPER_ROLE");
 
-    uint32 public constant BPS = 100_000; // 100%
+    uint32 public constant BPS = 10_000; // 100%
     uint32 public constant MAX_FEE = 50_000; // 50%
 
     /**
