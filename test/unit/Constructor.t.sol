@@ -6,8 +6,8 @@ import "../ERC4626StrategyTest.t.sol";
 contract ConstructorTest is ERC4626StrategyTest {
     function test_constructor_Success() public view {
         assertEq(strategy.vestingPeriod(), 1 weeks);
-        assertEq(strategy.performanceFee(), 10_000);
-        assertEq(strategy.developerFee(), 20_000);
+        assertEq(strategy.performanceFee(), 1_000);
+        assertEq(strategy.developerFee(), 2_000);
         assertEq(strategy.developerFeeRecipient(), developer);
         assertEq(strategy.integratorFeeRecipient(), integrator);
         assertEq(strategy.swapRouter(), ONEINCH_ROUTER);
@@ -33,8 +33,8 @@ contract ConstructorTest is ERC4626StrategyTest {
         vm.mockCall(asset, abi.encodeWithSelector(IERC20.decimals.selector), abi.encode(2));
         strategy = new ERC4626Strategy(
             BaseStrategy.ConstructorArgs(
-                10000, // 10%
-                20000, // 20%
+                1_000, // 10%
+                2_000, // 20%
                 integrator,
                 developer,
                 keeper,
@@ -57,8 +57,8 @@ contract ConstructorTest is ERC4626StrategyTest {
         vm.expectRevert(InvalidFee.selector);
         strategy = new ERC4626Strategy(
             BaseStrategy.ConstructorArgs(
-                100_001, // 100.001%
-                20_000, // 20%
+                10_001, // 100.001%
+                2_000, // 20%
                 integrator,
                 developer,
                 keeper,
@@ -79,8 +79,8 @@ contract ConstructorTest is ERC4626StrategyTest {
         vm.expectRevert(InvalidFee.selector);
         strategy = new ERC4626Strategy(
             BaseStrategy.ConstructorArgs(
-                100_000, // 100%
-                50_001, // 20%
+                10_000, // 100%
+                5_001, // 20%
                 integrator,
                 developer,
                 keeper,
@@ -101,8 +101,8 @@ contract ConstructorTest is ERC4626StrategyTest {
         vm.expectRevert(ZeroAddress.selector);
         strategy = new ERC4626Strategy(
             BaseStrategy.ConstructorArgs(
-                10000, // 10%
-                20_000, // 20%
+                1_000, // 10%
+                2_000, // 20%
                 address(0),
                 developer,
                 keeper,
@@ -121,8 +121,8 @@ contract ConstructorTest is ERC4626StrategyTest {
         vm.expectRevert(ZeroAddress.selector);
         strategy = new ERC4626Strategy(
             BaseStrategy.ConstructorArgs(
-                10000, // 10%
-                20_000, // 20%
+                1_000, // 10%
+                2_000, // 20%
                 integrator,
                 address(0),
                 keeper,
@@ -141,8 +141,8 @@ contract ConstructorTest is ERC4626StrategyTest {
         vm.expectRevert(ZeroAddress.selector);
         strategy = new ERC4626Strategy(
             BaseStrategy.ConstructorArgs(
-                10000, // 10%
-                20_000, // 20%
+                1_000, // 10%
+                2_000, // 20%
                 integrator,
                 developer,
                 address(0),
@@ -161,8 +161,8 @@ contract ConstructorTest is ERC4626StrategyTest {
         vm.expectRevert(ZeroAddress.selector);
         strategy = new ERC4626Strategy(
             BaseStrategy.ConstructorArgs(
-                10000, // 10%
-                20_000, // 20%
+                1_000, // 10%
+                2_000, // 20%
                 integrator,
                 developer,
                 keeper,
@@ -181,8 +181,8 @@ contract ConstructorTest is ERC4626StrategyTest {
         vm.expectRevert(ZeroAddress.selector);
         strategy = new ERC4626Strategy(
             BaseStrategy.ConstructorArgs(
-                10000, // 10%
-                20_000, // 20%
+                1_000, // 10%
+                2_000, // 20%
                 integrator,
                 developer,
                 keeper,
@@ -201,8 +201,8 @@ contract ConstructorTest is ERC4626StrategyTest {
         vm.expectRevert(ZeroAddress.selector);
         strategy = new ERC4626Strategy(
             BaseStrategy.ConstructorArgs(
-                10000, // 10%
-                20_000, // 20%
+                1_000, // 10%
+                2_000, // 20%
                 integrator,
                 developer,
                 keeper,
@@ -221,8 +221,8 @@ contract ConstructorTest is ERC4626StrategyTest {
         vm.expectRevert(ZeroAddress.selector);
         strategy = new ERC4626Strategy(
             BaseStrategy.ConstructorArgs(
-                10000, // 10%
-                20_000, // 20%
+                1_000, // 10%
+                2_000, // 20%
                 integrator,
                 developer,
                 keeper,
