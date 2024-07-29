@@ -36,11 +36,12 @@ contract BasicInvariants is ERC4626StrategyTest {
         for (uint256 i; i < _NUM_USER; i++) {
             vm.label(_userHandler.actors(i), string.concat("User ", vm.toString(i)));
         }
+        vm.startPrank(developer);
         for (uint256 i; i < _NUM_KEEPER; i++) {
-            vm.prank(developer);
             strategy.grantRole(strategy.KEEPER_ROLE(), _keeperHandler.actors(i));
             vm.label(_keeperHandler.actors(i), string.concat("Keeper ", vm.toString(i)));
         }
+        vm.stopPrank();
         for (uint256 i; i < _NUM_PARAM; i++) {
             vm.label(_paramHandler.actors(i), string.concat("Param ", vm.toString(i)));
         }
