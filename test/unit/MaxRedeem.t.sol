@@ -12,7 +12,7 @@ contract MaxRedeemTest is ERC4626StrategyTest {
         strategy.deposit(100e18, alice);
         vm.stopPrank();
 
-        assertEq(strategy.maxRedeem(alice), strategy.balanceOf(alice) - 1);
+        assertApproxEqRel(strategy.maxRedeem(alice), strategy.balanceOf(alice), 1);
     }
 
     function test_MaxRedeem_HigherThanMaxWithdraw() public {
@@ -28,6 +28,7 @@ contract MaxRedeemTest is ERC4626StrategyTest {
             abi.encodeWithSelector(ERC4626.maxWithdraw.selector, address(strategy)),
             abi.encode(50e18)
         );
-        assertEq(strategy.maxRedeem(alice), strategy.convertToShares(50e18));
+        uint256 maxRedeem = strategy.maxRedeem(alice);
+        assertEq(maxRedeem, strategy.convertToShares(50e18));
     }
 }

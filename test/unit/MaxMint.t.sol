@@ -23,4 +23,13 @@ contract MaxMintTest is ERC4626StrategyTest {
             strategy.convertToShares(ERC4626(strategyAsset).maxDeposit(address(strategy)))
         );
     }
+
+    function test_MaxMint_MockValue() public {
+        vm.mockCall(
+            strategyAsset,
+            abi.encodeWithSelector(ERC4626.maxDeposit.selector, address(strategy)),
+            abi.encode(100e18)
+        );
+        assertEq(strategy.maxMint(alice), strategy.convertToShares(100e18));
+    }
 }

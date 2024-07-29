@@ -17,7 +17,7 @@ contract SwapTest is ERC4626StrategyTest {
         vm.stopPrank();
     }
 
-    function test_swap_normal() public {
+    function test_swap_Success() public {
         deal(USDC, address(strategy), 100e18);
         deal(asset, address(router), 100e18);
 

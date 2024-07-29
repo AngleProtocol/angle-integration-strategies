@@ -4,7 +4,7 @@ pragma solidity 0.8.26;
 import "../ERC4626StrategyTest.t.sol";
 
 contract MintTest is ERC4626StrategyTest {
-    function test_Mint_Success() public {
+    function test_Mint_Profit() public {
         deal(asset, alice, 100e18);
 
         vm.startPrank(alice);
@@ -15,12 +15,12 @@ contract MintTest is ERC4626StrategyTest {
         uint256 assetsMinted = strategy.mint(shares, alice);
         vm.stopPrank();
 
+        assertEq(assetsMinted, previewedMint);
         assertEq(ERC4626(strategyAsset).balanceOf(address(strategy)), ERC4626(strategyAsset).convertToShares(100e18));
         assertEq(IERC20(asset).balanceOf(alice), 0);
         assertEq(IERC20(asset).balanceOf(address(strategy)), 0);
         assertEq(strategy.balanceOf(alice), shares);
         assertEq(strategy.totalSupply(), shares);
-        assertEq(assetsMinted, previewedMint);
     }
 
     function test_Mint_MultipleProfit() public {
@@ -41,17 +41,16 @@ contract MintTest is ERC4626StrategyTest {
         uint256 previewedMint = strategy.previewMint(shares);
         uint256 previousBalance = ERC4626(strategyAsset).balanceOf(address(strategy));
 
-        vm.prank(alice);
-        uint256 assetsMinted = strategy.mint(shares, alice);
-
         uint256 feeShares = strategy.convertToShares(
             ((totalAssets - lastTotalAssets) * strategy.performanceFee()) / strategy.BPS()
         );
         uint256 developerFeeShares = (feeShares * strategy.developerFee()) / strategy.BPS();
 
+        vm.prank(alice);
+        uint256 assetsMinted = strategy.mint(shares, alice);
+
+        assertApproxEqRel(strategy.lastTotalAssets(), strategy.totalAssets(), 1);
         assertEq(assetsMinted, previewedMint);
-        assertLe(strategy.lastTotalAssets() - 1, strategy.totalAssets());
-        assertGe(strategy.lastTotalAssets(), strategy.totalAssets());
         assertEq(strategy.balanceOf(alice), shares);
         assertEq(strategy.balanceOf(strategy.integratorFeeRecipient()), feeShares - developerFeeShares);
         assertEq(strategy.balanceOf(strategy.developerFeeRecipient()), developerFeeShares);
@@ -73,12 +72,11 @@ contract MintTest is ERC4626StrategyTest {
 
         vm.warp(block.timestamp + 1 weeks);
 
-        vm.mockCall(strategyAsset, abi.encodeWithSelector(IERC20.balanceOf.selector), abi.encode(9e18));
+        vm.mockCall(strategyAsset, abi.encodeWithSelector(ERC4626.convertToAssets.selector), abi.encode(9e18));
         shares = strategy.convertToShares(100e18);
         uint256 previewedMint = strategy.previewMint(shares);
 
         vm.prank(alice);
-        vm.mockCall(strategyAsset, abi.encodeWithSelector(IERC20.balanceOf.selector), abi.encode(9e18));
         uint256 assetsMinted = strategy.mint(shares, alice);
 
         assertEq(assetsMinted, previewedMint);

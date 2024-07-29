@@ -28,6 +28,7 @@ contract MaxWithdrawTest is ERC4626StrategyTest {
             abi.encodeWithSelector(ERC4626.maxWithdraw.selector, address(strategy)),
             abi.encode(50e18)
         );
-        assertEq(strategy.maxWithdraw(alice), 50e18);
+        uint256 maxWithdraw = strategy.maxWithdraw(alice);
+        assertEq(maxWithdraw, 50e18);
     }
 }
