@@ -13,6 +13,7 @@ contract MaxWithdrawTest is ERC4626StrategyTest {
         vm.stopPrank();
 
         assertEq(strategy.maxWithdraw(alice), strategy.convertToAssets(strategy.balanceOf(alice)));
+        assertEq(strategy.maxWithdraw(alice), 99999999999999999999);
     }
 
     function test_MaxWithdraw_HigherThanMaxWithdraw() public {

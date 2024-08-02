@@ -34,7 +34,7 @@ contract DepositTest is ERC4626StrategyTest {
 
         uint256 totalAssets = strategy.totalAssets();
         uint256 lastTotalAssets = strategy.lastTotalAssets();
-        uint256 previewedDeposit = strategy.previewDeposit(100e18);
+        uint256 totalSupply = strategy.totalSupply();
         uint256 previousBalance = ERC4626(strategyAsset).balanceOf(address(strategy));
 
         uint256 feeShares = strategy.convertToShares(
@@ -42,11 +42,16 @@ contract DepositTest is ERC4626StrategyTest {
         );
         uint256 developerFeeShares = (feeShares * strategy.developerFee()) / strategy.BPS();
 
-        vm.prank(alice);
-        strategy.deposit(100e18, alice);
+        vm.startPrank(alice);
+        uint256 previewDeposit = strategy.previewDeposit(100e18);
+        uint256 deposited = strategy.deposit(100e18, alice);
+        vm.stopPrank();
 
+        assertEq(deposited, 99856429656079656377);
+        assertEq(previewDeposit, deposited);
+        assertEq(deposited, ((totalSupply + feeShares) * (100e18)) / totalAssets);
         assertApproxEqAbs(strategy.lastTotalAssets(), strategy.totalAssets(), 1);
-        assertEq(strategy.balanceOf(alice), previewedDeposit);
+        assertEq(strategy.balanceOf(alice), previewDeposit);
         assertEq(strategy.balanceOf(strategy.integratorFeeRecipient()), feeShares - developerFeeShares);
         assertEq(strategy.balanceOf(strategy.developerFeeRecipient()), developerFeeShares);
         assertEq(
@@ -71,6 +76,7 @@ contract DepositTest is ERC4626StrategyTest {
         vm.prank(alice);
         uint256 deposited2 = strategy.deposit(100e18, alice);
 
+        assertEq(deposited2, 1111111111111111110998);
         assertEq(deposited2, previewedDeposit);
         assertEq(strategy.balanceOf(alice), previewedDeposit);
         assertEq(strategy.totalSupply(), deposited2 + deposited);

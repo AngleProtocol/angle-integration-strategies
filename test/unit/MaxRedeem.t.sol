@@ -30,5 +30,6 @@ contract MaxRedeemTest is ERC4626StrategyTest {
         );
         uint256 maxRedeem = strategy.maxRedeem(alice);
         assertEq(maxRedeem, strategy.convertToShares(50e18));
+        assertEq(maxRedeem, 50e18);
     }
 }

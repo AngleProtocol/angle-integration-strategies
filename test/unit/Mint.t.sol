@@ -49,6 +49,7 @@ contract MintTest is ERC4626StrategyTest {
         vm.prank(alice);
         uint256 assetsMinted = strategy.mint(shares, alice);
 
+        assertEq(shares, 99856429656079656377);
         assertApproxEqRel(strategy.lastTotalAssets(), strategy.totalAssets(), 1);
         assertEq(assetsMinted, previewedMint);
         assertEq(strategy.balanceOf(alice), shares);
@@ -79,6 +80,7 @@ contract MintTest is ERC4626StrategyTest {
         vm.prank(alice);
         uint256 assetsMinted = strategy.mint(shares, alice);
 
+        assertEq(shares, 1111111111111111110998);
         assertEq(assetsMinted, previewedMint);
         assertEq(strategy.balanceOf(alice), shares);
         assertEq(strategy.balanceOf(strategy.integratorFeeRecipient()), 0);

@@ -22,6 +22,7 @@ contract RedeemTest is ERC4626StrategyTest {
 
         uint256 totalAssets = strategy.totalAssets();
         uint256 lastTotalAssets = strategy.lastTotalAssets();
+        uint256 totalSupply = strategy.totalSupply();
 
         vm.startPrank(alice);
         uint256 previewedRedeem = strategy.previewRedeem(previousBalance);
@@ -33,7 +34,9 @@ contract RedeemTest is ERC4626StrategyTest {
         );
         uint256 developerFeeShares = (feeShares * strategy.developerFee()) / strategy.BPS();
 
+        assertEq(redeemed, 100143776764715923817); // profit 159751960795470907
         assertEq(previewedRedeem, redeemed);
+        assertEq(redeemed, (totalAssets * previousBalance) / (totalSupply + feeShares));
         assertEq(IERC20(asset).balanceOf(alice), previewedRedeem);
         assertEq(strategy.balanceOf(alice), 0);
         assertEq(strategy.balanceOf(strategy.integratorFeeRecipient()), feeShares - developerFeeShares);
@@ -45,6 +48,7 @@ contract RedeemTest is ERC4626StrategyTest {
 
         uint256 totalAssets = strategy.totalAssets();
         uint256 lastTotalAssets = strategy.lastTotalAssets();
+        uint256 totalSupply = strategy.totalSupply();
 
         uint256 feeShares = strategy.convertToShares(
             ((totalAssets - lastTotalAssets) * strategy.performanceFee()) / strategy.BPS()
@@ -57,6 +61,7 @@ contract RedeemTest is ERC4626StrategyTest {
         vm.stopPrank();
 
         assertEq(previewedRedeem, redeemed);
+        assertEq(redeemed, (totalAssets * (previousBalance / 2)) / (totalSupply + feeShares));
         assertEq(IERC20(asset).balanceOf(alice), previewedRedeem);
         assertEq(strategy.balanceOf(alice), previousBalance / 2);
         assertEq(strategy.balanceOf(strategy.integratorFeeRecipient()), feeShares - developerFeeShares);
@@ -75,6 +80,7 @@ contract RedeemTest is ERC4626StrategyTest {
         vm.stopPrank();
 
         assertEq(previewedRedeem, redeemed);
+        assertEq(redeemed, (totalAssets * (previousBalance / 2)) / (totalSupply + feeShares));
         assertEq(IERC20(asset).balanceOf(alice), previousAssetBalance + previewedRedeem);
         assertEq(strategy.balanceOf(alice), 0);
         assertEq(strategy.balanceOf(strategy.integratorFeeRecipient()), feeShares - developerFeeShares);
@@ -82,15 +88,20 @@ contract RedeemTest is ERC4626StrategyTest {
     }
 
     function test_Redeem_Loss() public {
+        vm.mockCall(strategyAsset, abi.encodeWithSelector(ERC4626.convertToAssets.selector), abi.encode(9e18));
         uint256 previousBalance = strategy.balanceOf(alice);
 
+        uint256 totalAssets = strategy.totalAssets();
+        uint256 totalSupply = strategy.totalSupply();
+
         vm.startPrank(alice);
-        vm.mockCall(strategyAsset, abi.encodeWithSelector(ERC4626.convertToAssets.selector), abi.encode(9e18));
         uint256 previewedRedeem = strategy.previewRedeem(previousBalance);
         uint256 redeemed = strategy.redeem(previousBalance, alice, alice);
         vm.stopPrank();
 
+        assertEq(redeemed, 9e18);
         assertEq(previewedRedeem, redeemed);
+        assertEq(redeemed, (totalAssets * previousBalance) / totalSupply);
         assertEq(IERC20(asset).balanceOf(alice), previewedRedeem);
         assertEq(strategy.balanceOf(alice), 0);
         assertEq(strategy.balanceOf(strategy.integratorFeeRecipient()), 0);
