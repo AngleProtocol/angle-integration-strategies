@@ -98,8 +98,8 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     bytes32 public constant INTEGRATOR_ROLE = keccak256("INTEGRATOR_ROLE");
     bytes32 public constant DEVELOPER_ROLE = keccak256("DEVELOPER_ROLE");
 
-    uint32 public constant WAD = 100_000; // 100%
-    uint32 public constant MAX_FEE = 50_000; // 50%
+    uint32 public constant BPS = 10_000; // 100%
+    uint32 public constant MAX_FEE = 5_000; // 50%
 
     /**
      * @notice The offset to convert the decimals
@@ -162,7 +162,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     constructor(
         ConstructorArgs memory args
     ) ERC20(args.definitiveName, args.definitiveSymbol) ERC4626(IERC20(args.definitiveAsset)) {
-        if (args.initialPerformanceFee > WAD || args.initialDeveloperFee > WAD || args.initialDeveloperFee > MAX_FEE) {
+        if (args.initialPerformanceFee > BPS || args.initialDeveloperFee > MAX_FEE) {
             revert InvalidFee();
         }
         if (
@@ -170,6 +170,9 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
             args.initialDeveloperFeeRecipient == address(0) ||
             args.initialSwapRouter == address(0) ||
             args.initialTokenTransferAddress == address(0) ||
+            args.initialKeeper == address(0) ||
+            args.initialDeveloper == address(0) ||
+            args.initialIntegrator == address(0) ||
             args.definitiveStrategyAsset == address(0)
         ) {
             revert ZeroAddress();
@@ -185,6 +188,9 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
 
         STRATEGY_ASSET = args.definitiveStrategyAsset;
         _DECIMALS_OFFSET = uint8(uint256(18).zeroFloorSub(decimals()));
+
+        // give allowance
+        IERC20(args.definitiveAsset).safeIncreaseAllowance(args.definitiveStrategyAsset, type(uint256).max);
 
         // Roles managment
         _grantRole(KEEPER_ROLE, args.initialKeeper);
@@ -210,7 +216,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      * @inheritdoc ERC4626
      */
     function totalAssets() public view override returns (uint256) {
-        return _assetsHeld() - lockedProfit();
+        return _assetsHeld().zeroFloorSub(lockedProfit()); // handle rounding down of assets
     }
 
     /**
@@ -459,8 +465,8 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
         newTotalAssets = totalAssets();
 
         // `newTotalAssets.zeroFloorSub(lastTotalAssets)` is the value of the total interest earned by the strategy.
-        // `feeAssets` may be rounded down to 0 if `totalInterest * fee < WAD`.
-        uint256 feeAssets = (newTotalAssets.zeroFloorSub(lastTotalAssets)).mulDiv(performanceFee, WAD);
+        // `feeAssets` may be rounded down to 0 if `totalInterest * fee < BPS`.
+        uint256 feeAssets = (newTotalAssets.zeroFloorSub(lastTotalAssets)).mulDiv(performanceFee, BPS);
         if (feeAssets != 0) {
             // The fee assets is subtracted from the total assets in these calculations to compensate for the fact
             // that total assets is already increased by the total interest (including the fee assets).
@@ -471,8 +477,8 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
                 Math.Rounding.Floor
             );
 
-            developerFeeShares = feeShares.mulDiv(developerFee, WAD);
-            integratorFeeShares = feeShares - developerFeeShares; // Cannot underflow as developerFee <= WAD
+            developerFeeShares = feeShares.mulDiv(developerFee, BPS);
+            integratorFeeShares = feeShares - developerFeeShares; // Cannot underflow as developerFee <= BPS
         }
     }
 
@@ -486,8 +492,6 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      * @custom:requires INTEGRATOR_ROLE
      */
     function setVestingPeriod(uint64 newVestingPeriod) external onlyRole(INTEGRATOR_ROLE) {
-        if (newVestingPeriod == 0 || newVestingPeriod > 365 days) revert InvalidParameter();
-
         vestingPeriod = newVestingPeriod;
 
         emit VestingPeriodUpdated(newVestingPeriod);
@@ -499,7 +503,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      * @custom:requires INTEGRATOR_ROLE
      */
     function setPerformanceFee(uint32 newPerformanceFee) external onlyRole(INTEGRATOR_ROLE) {
-        if (newPerformanceFee > WAD) {
+        if (newPerformanceFee > BPS) {
             revert InvalidFee();
         }
         performanceFee = newPerformanceFee;
@@ -513,7 +517,7 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      * @custom:requires DEVELOPER_ROLE
      */
     function setDeveloperFee(uint32 newDeveloperFee) external onlyRole(DEVELOPER_ROLE) {
-        if (newDeveloperFee > WAD || newDeveloperFee > performanceFee) {
+        if (newDeveloperFee > MAX_FEE) {
             revert InvalidFee();
         }
         developerFee = newDeveloperFee;
@@ -581,6 +585,8 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      * @param callDatas array of bytes to call the router/aggregator
      * @param amounts array of amounts to swap
      * @custom:requires KEEPER_ROLE
+     *
+     * @dev the assets which are getting vested yield rewards for the whole streategy
      */
     function swap(
         address[] calldata tokens,

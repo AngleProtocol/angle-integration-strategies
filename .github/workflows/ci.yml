@@ -73,6 +73,11 @@ jobs:
             out
           key: "build-${{ github.sha }}"
 
+      - name: Setup repo
+        uses: ./.github/actions/setup-repo
+        with:
+          registry-token: ${{ secrets.GH_REGISTRY_ACCESS_TOKEN }}
+
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
@@ -112,6 +117,11 @@ jobs:
         with:
           version: nightly
 
+      - name: Setup repo
+        uses: ./.github/actions/setup-repo
+        with:
+          registry-token: ${{ secrets.GH_REGISTRY_ACCESS_TOKEN }}
+
       - name: Run Foundry tests
         run: yarn test:invariant
         env:
@@ -143,6 +153,11 @@ jobs:
             out
           key: "build-${{ github.sha }}"
 
+      - name: Setup repo
+        uses: ./.github/actions/setup-repo
+        with:
+          registry-token: ${{ secrets.GH_REGISTRY_ACCESS_TOKEN }}
+
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
@@ -173,11 +188,18 @@ jobs:
       - name: "Install Foundry"
         uses: "foundry-rs/foundry-toolchain@v1"
 
+      - name: Setup repo
+        uses: ./.github/actions/setup-repo
+        with:
+          registry-token: ${{ secrets.GH_REGISTRY_ACCESS_TOKEN }}
+
       - name: "Install lcov"
         run: "sudo apt-get install lcov"
 
       - name: "Generate the coverage report using the unit and the integration tests"
         run: "yarn ci:coverage"
+        env:
+          ETH_NODE_URI_MAINNET: ${{ secrets.ETH_NODE_URI_MAINNET }}
 
       - name: "Upload coverage report to Codecov"
         uses: "codecov/codecov-action@v3"

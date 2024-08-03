@@ -89,6 +89,11 @@ jobs:
         with:
           version: nightly
 
+      - name: Setup repo
+        uses: ./.github/actions/setup-repo
+        with:
+          registry-token: ${{ secrets.GH_REGISTRY_ACCESS_TOKEN }}
+
       - name: Run Foundry tests
         run: yarn test:unit
         env:
@@ -122,6 +127,11 @@ jobs:
         uses: foundry-rs/foundry-toolchain@v1
         with:
           version: nightly
+
+      - name: Setup repo
+        uses: ./.github/actions/setup-repo
+        with:
+          registry-token: ${{ secrets.GH_REGISTRY_ACCESS_TOKEN }}
 
       - name: Run Foundry tests
         run: yarn test:invariant
@@ -158,6 +168,11 @@ jobs:
         uses: foundry-rs/foundry-toolchain@v1
         with:
           version: nightly
+
+      - name: Setup repo
+        uses: ./.github/actions/setup-repo
+        with:
+          registry-token: ${{ secrets.GH_REGISTRY_ACCESS_TOKEN }}
 
       - name: Run Foundry tests
         run: yarn test:fuzz
