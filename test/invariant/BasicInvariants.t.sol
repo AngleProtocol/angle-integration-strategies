@@ -43,7 +43,7 @@ contract BasicInvariants is ERC4626StrategyTest {
         strategy.setTokenTransferAddress(address(router));
         strategy.setSwapRouter(address(router));
         vm.stopPrank();
-        deal(asset, address(router), 1e40);
+        deal(asset, address(router), 1e30);
 
         // Deposit some assets
         vm.startPrank(alice);
@@ -69,7 +69,7 @@ contract BasicInvariants is ERC4626StrategyTest {
         // Label newly created addresses
         for (uint256 i; i < _NUM_USER; i++) {
             vm.label(_userHandler.actors(i), string.concat("User ", vm.toString(i)));
-            deal(asset, _userHandler.actors(i), 1e27);
+            deal(asset, _userHandler.actors(i), 1e30);
         }
         vm.startPrank(developer);
         for (uint256 i; i < _NUM_KEEPER; i++) {
