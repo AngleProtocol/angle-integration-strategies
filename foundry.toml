@@ -6,7 +6,7 @@ libs = ["lib"]
 script = "scripts"
 cache_path = "cache"
 gas_reports = ["*"]
-via_ir = true
+via_ir = false
 sizes = true
 optimizer = true
 optimizer_runs = 1000
@@ -17,8 +17,9 @@ ffi = true
 runs = 10000
 
 [invariant]
-runs = 1000
-depth = 30
+fail_on_revert = true
+runs = 10
+depth = 1000
 
 [rpc_endpoints]
 arbitrum = "${ETH_NODE_URI_ARBITRUM}"

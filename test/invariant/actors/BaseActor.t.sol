@@ -2,7 +2,7 @@
 pragma solidity ^0.8.19;
 
 import "../../Constants.t.sol";
-import { ERC4626Strategy } from "../../../contracts/ERC4626Strategy.sol";
+import { ERC4626Strategy, ERC4626 } from "../../../contracts/ERC4626Strategy.sol";
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 import { MockRouter } from "../../mock/MockRouter.sol";
 import { Test, stdMath, StdStorage, stdStorage, console } from "forge-std/Test.sol";
@@ -13,6 +13,7 @@ contract BaseActor is Test {
 
     ERC4626Strategy public strategy;
     IERC20 public asset;
+    ERC4626 public strategyAsset;
     address public router;
 
     mapping(address => uint256) public addressToIndex;
@@ -37,6 +38,7 @@ contract BaseActor is Test {
 
         strategy = ERC4626Strategy(_strategy);
         asset = IERC20(strategy.asset());
+        strategyAsset = ERC4626(strategy.STRATEGY_ASSET());
         router = address(strategy.swapRouter());
     }
 }
