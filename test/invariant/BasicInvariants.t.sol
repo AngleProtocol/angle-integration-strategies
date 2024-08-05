@@ -47,17 +47,17 @@ contract BasicInvariants is ERC4626StrategyTest {
 
         // Deposit some assets
         vm.startPrank(alice);
-        deal(asset, alice, 1e18);
-        IERC20(asset).approve(address(strategy), 1e18);
-        strategy.deposit(1e18, alice);
+        deal(asset, alice, 1e24);
+        IERC20(asset).approve(address(strategy), 1e24);
+        uint256 deposited = strategy.deposit(1e24, alice);
         vm.stopPrank();
 
         // Create stores
         _vestingStore = new VestingStore();
         _stateVariableStore = new StateVariableStore();
 
-        _stateVariableStore.addShares(1e18);
-        _stateVariableStore.addUnderlyingStrategyShares(ERC4626(strategyAsset).convertToShares(1e18));
+        _stateVariableStore.addShares(1e24);
+        _stateVariableStore.addUnderlyingStrategyShares(ERC4626(strategyAsset).convertToShares(1e24));
 
         // Create actors
         _developerHandler = new DeveloperActor(_NUM_DEVELOPER, address(strategy));

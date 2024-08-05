@@ -48,7 +48,7 @@ contract KeeperActor is BaseActor {
 
     function accumulate(uint256 actorIndexSeed, uint256 profit, uint8 negative) public useActor(actorIndexSeed) {
         uint256 assetsHeld = strategyAsset.convertToAssets(strategyAsset.balanceOf(address(strategy)));
-        profit = bound(profit, 1, 1e8);
+        profit = bound(profit, 1e16, 1e20);
 
         vm.mockCall(
             address(strategyAsset),
