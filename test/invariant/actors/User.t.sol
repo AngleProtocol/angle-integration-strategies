@@ -19,7 +19,7 @@ contract UserActor is BaseActor {
     }
 
     function deposit(uint256 actorIndexSeed, uint256 amount) public useActor(actorIndexSeed) {
-        amount = bound(amount, 1e18, 1e21);
+        amount = bound(amount, 1e15, 1e26);
 
         uint256 previousDeveloperBalance = strategy.balanceOf(strategy.developerFeeRecipient());
         uint256 previousIntegratorBalance = strategy.balanceOf(strategy.integratorFeeRecipient());
@@ -107,7 +107,7 @@ contract UserActor is BaseActor {
     }
 
     function mint(uint256 actorIndexSeed, uint256 amount) public useActor(actorIndexSeed) {
-        amount = bound(amount, 1e18, 1e21);
+        amount = bound(amount, 1e15, 1e26);
         uint256 assets = strategy.convertToAssets(amount);
 
         uint256 previousDeveloperBalance = strategy.balanceOf(strategy.developerFeeRecipient());

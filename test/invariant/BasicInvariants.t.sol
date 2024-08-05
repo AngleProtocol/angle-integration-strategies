@@ -43,7 +43,7 @@ contract BasicInvariants is ERC4626StrategyTest {
         strategy.setTokenTransferAddress(address(router));
         strategy.setSwapRouter(address(router));
         vm.stopPrank();
-        deal(asset, address(router), 1e27);
+        deal(asset, address(router), 1e40);
 
         // Deposit some assets
         vm.startPrank(alice);
