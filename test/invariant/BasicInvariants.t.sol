@@ -9,6 +9,8 @@ import { ParamActor } from "./actors/Param.t.sol";
 import { MockRouter } from "../mock/MockRouter.sol";
 import { VestingStore } from "./stores/VestingStore.sol";
 import { StateVariableStore } from "./stores/StateVariableStore.sol";
+import { IntegratorActor } from "./actors/Integrator.t.sol";
+import { DeveloperActor } from "./actors/Developer.t.sol";
 import "../ERC4626StrategyTest.t.sol";
 
 contract BasicInvariants is ERC4626StrategyTest {
@@ -17,10 +19,14 @@ contract BasicInvariants is ERC4626StrategyTest {
     uint256 internal constant _NUM_USER = 10;
     uint256 internal constant _NUM_KEEPER = 2;
     uint256 internal constant _NUM_PARAM = 5;
+    uint256 internal constant _NUM_INTEGRATOR = 2;
+    uint256 internal constant _NUM_DEVELOPER = 2;
 
     UserActor internal _userHandler;
     KeeperActor internal _keeperHandler;
     ParamActor internal _paramHandler;
+    DeveloperActor internal _developerHandler;
+    IntegratorActor internal _integratorHandler;
     VestingStore internal _vestingStore;
     StateVariableStore internal _stateVariableStore;
 
@@ -54,6 +60,8 @@ contract BasicInvariants is ERC4626StrategyTest {
         _stateVariableStore.addUnderlyingStrategyShares(ERC4626(strategyAsset).convertToShares(1e18));
 
         // Create actors
+        _developerHandler = new DeveloperActor(_NUM_DEVELOPER, address(strategy));
+        _integratorHandler = new IntegratorActor(_NUM_INTEGRATOR, address(strategy));
         _userHandler = new UserActor(_NUM_USER, address(strategy), _stateVariableStore);
         _keeperHandler = new KeeperActor(_NUM_KEEPER, address(strategy), _stateVariableStore, _vestingStore);
         _paramHandler = new ParamActor(_NUM_PARAM, address(strategy));
@@ -68,14 +76,26 @@ contract BasicInvariants is ERC4626StrategyTest {
             strategy.grantRole(strategy.KEEPER_ROLE(), _keeperHandler.actors(i));
             vm.label(_keeperHandler.actors(i), string.concat("Keeper ", vm.toString(i)));
         }
+        for (uint256 i; i < _NUM_DEVELOPER; i++) {
+            strategy.grantRole(strategy.DEVELOPER_ROLE(), _developerHandler.actors(i));
+            vm.label(_developerHandler.actors(i), string.concat("Developer ", vm.toString(i)));
+        }
         vm.stopPrank();
         for (uint256 i; i < _NUM_PARAM; i++) {
             vm.label(_paramHandler.actors(i), string.concat("Param ", vm.toString(i)));
         }
+        vm.startPrank(integrator);
+        for (uint256 i; i < _NUM_INTEGRATOR; i++) {
+            strategy.grantRole(strategy.INTEGRATOR_ROLE(), _integratorHandler.actors(i));
+            vm.label(_integratorHandler.actors(i), string.concat("Integrator ", vm.toString(i)));
+        }
+        vm.stopPrank();
 
         targetContract(address(_userHandler));
         targetContract(address(_keeperHandler));
         targetContract(address(_paramHandler));
+        targetContract(address(_integratorHandler));
+        targetContract(address(_developerHandler));
 
         {
             bytes4[] memory selectors = new bytes4[](2);
@@ -95,6 +115,19 @@ contract BasicInvariants is ERC4626StrategyTest {
             selectors[2] = UserActor.redeem.selector;
             selectors[3] = UserActor.withdraw.selector;
             targetSelector(FuzzSelector({ addr: address(_userHandler), selectors: selectors }));
+        }
+        {
+            bytes4[] memory selectors = new bytes4[](3);
+            selectors[0] = IntegratorActor.setVestingPeriod.selector;
+            selectors[1] = IntegratorActor.setPerformanceFee.selector;
+            selectors[2] = IntegratorActor.setIntegratorFeeRecipient.selector;
+            targetSelector(FuzzSelector({ addr: address(_integratorHandler), selectors: selectors }));
+        }
+        {
+            bytes4[] memory selectors = new bytes4[](2);
+            selectors[0] = DeveloperActor.setDeveloperFeeRecipient.selector;
+            selectors[1] = DeveloperActor.setDeveloperFee.selector;
+            targetSelector(FuzzSelector({ addr: address(_developerHandler), selectors: selectors }));
         }
     }
 
