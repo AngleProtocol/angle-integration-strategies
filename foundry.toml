@@ -6,7 +6,7 @@ libs = ["lib"]
 script = "scripts"
 cache_path = "cache"
 gas_reports = ["*"]
-via_ir = false
+via_ir = true
 sizes = true
 optimizer = true
 optimizer_runs = 1000
@@ -17,9 +17,9 @@ ffi = true
 runs = 10000
 
 [invariant]
-fail_on_revert = true
 runs = 10
 depth = 1000
+fail_on_revert = true
 
 [rpc_endpoints]
 arbitrum = "${ETH_NODE_URI_ARBITRUM}"
@@ -58,7 +58,7 @@ runs = 2000
 [profile.dev.invariant]
 runs = 10
 depth = 1
-fail_on_revert = false
+fail_on_revert = true
 
 [profile.ci]
 src = "test"
@@ -71,4 +71,4 @@ runs = 100
 [profile.ci.invariant]
 runs = 10
 depth = 30
-fail_on_revert = false
+fail_on_revert = true
