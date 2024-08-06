@@ -39,3 +39,49 @@ There are three roles in the contract:
 The Integrator role is its own admin meaning that the initial integrator can add a new integrator and remove themselves from the role.
 The Developer role is its own admin meaning that the initial developer can add a new developer and remove themselves from the role.
 The Keeper role has developer role as admin meaning that the initial developer can add a new keeper and remove initialKeeper from the role. (It is designed as such because the developer is the one that should be operating the keeper).
+
+## Payloads Scripts
+
+These scripts automate the process of depositing and withdrawing tokens into/from the strategy using the Angle API.
+
+### Installation
+
+Make the scripts executable:
+
+    chmod +x utils/Deposit.sh utils/Withdraw.sh
+
+### Usage
+
+Run the scripts with the desired parameters:
+
+    ./utils/Deposit.sh [OPTIONS]
+    ./utils/Withdraw.sh [OPTIONS]
+
+### Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `-e` | Env (local, dev)| http://localhost:5001 (local) |
+| `-c` | Chain ID | 42161 (Arbitrum) |
+| `-i` | Token amount to deposit/withdraw | 100000000 |
+| `-s` | Strategy address | 0xC0077E921C30c39cDD8b693E25Af572C10E82a05 |
+| `-r` | Router address | 0x9A33e690AA78A4c346e72f7A5e16e5d7278BE835 (Arbitrum) |
+| `-l` | Slippage | 0.1 |
+| `-u` | User address | - |
+| `-t` | Token to swap (usdc, usdt) or to directly deposit (usda) | - |
+
+### Examples
+
+#### Deposit
+
+    ./utils/Deposit.sh -c 42161 -i 100000000 -s 0xC0077E921C30c39cDD8b693E25Af572C10E82a05 -r 0x9A33e690AA78A4c346e72f7A5e16e5d7278BE835 -l 0.1 -u 0x25681Ab599B4E2CEea31F8B498052c53FC2D74db -t usdc
+
+#### Withdraw
+
+    ./utils/Withdraw.sh -c 42161 -i 10000000000 -s 0xC0077E921C30c39cDD8b693E25Af572C10E82a05 -r 0x9A33e690AA78A4c346e72f7A5e16e5d7278BE835 -l 0.1 -u 0x25681Ab599B4E2CEea31F8B498052c53FC2D74db -t usdc
+
+## Notes
+
+- Ensure you have the correct user address for the token you're depositing or withdrawing.
+- The scripts require an active local node running if used in local. You can use `anvil --auto-impersonate --fork-url $FORK_URL` in order to simulate transactions on a forked network.
+- If you want to broadcast transactions on Arbitrum mainnet, you can get rid of `--unlocked` options in forge scripts and use `-i 1` for example to input `sender` private key.
