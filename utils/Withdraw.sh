@@ -57,14 +57,14 @@ case $env in
         ;;
 esac
 
-# Execute the cast call and store the full result
-FULL_RESULT=$(cast call $strategyAddress "maxWithdraw(address)(uint256)" $userAddress --rpc-url fork)
+# # Execute the cast call and store the full result
+# FULL_RESULT=$(cast call $strategyAddress "maxRedeem(address)(uint256)" $userAddress --rpc-url fork)
 
-# Extract only the numeric part before the space
-WITHDRAW_AMOUNT=$(echo $FULL_RESULT | awk '{print $1}')
+# # Extract only the numeric part before the space
+# WITHDRAW_AMOUNT=$(echo $FULL_RESULT | awk '{print $1}')
 
 # Construct the URL
-url="${base_url}/v1/integrators/payload/withdraw?chainId=$chainId&outputTokenAddress=$outputTokenAddress&inputTokenAmount=$WITHDRAW_AMOUNT&strategyAddress=$strategyAddress&userAddress=$userAddress&slippage=$slippage&ipAddress=none"
+url="${base_url}/v1/integrators/payload/withdraw?chainId=$chainId&outputTokenAddress=$outputTokenAddress&inputTokenAmount=$inputTokenAmount&strategyAddress=$strategyAddress&userAddress=$userAddress&slippage=$slippage&ipAddress=none"
 
 echo $url
 
@@ -88,4 +88,4 @@ forge script scripts/WithdrawPayloadScript.s.sol \
     --evm-version shanghai \
     --broadcast \
     -vvvv \
-    --sig "run(bytes,address,uint256,address,address)" "$data" "$outputTokenAddress" "$WITHDRAW_AMOUNT" "$strategyAddress" "$routerAddress"
+    --sig "run(bytes,address,uint256,address,address)" "$data" "$outputTokenAddress" "$inputTokenAmount" "$strategyAddress" "$routerAddress"

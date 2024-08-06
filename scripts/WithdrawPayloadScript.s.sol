@@ -23,7 +23,7 @@ contract WithdrawPayloadScript is Script {
         ROUTER_ADDRESS = routerAddress;
         ERC4626Strategy stUSDStrat = ERC4626Strategy(strategyAddress);
 
-        stUSDStrat.approve(ROUTER_ADDRESS, stUSDStrat.convertToShares(inputTokenAmount) + 1);
+        stUSDStrat.approve(ROUTER_ADDRESS, inputTokenAmount);
 
         (bool success, ) = ROUTER_ADDRESS.call(data);
         require(success, "Withdraw - mixer() call failed");
