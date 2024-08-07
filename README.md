@@ -50,6 +50,8 @@ Make the scripts executable:
 
     chmod +x utils/Deposit.sh utils/Withdraw.sh
 
+Make sure to add in your .env file `ARBITRUM_ETHERSCAN_API_KEY` and `ETH_NODE_URI_ARBITRUM`.
+
 ### Usage
 
 Run the scripts with the desired parameters:
@@ -61,7 +63,7 @@ Run the scripts with the desired parameters:
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `-e` | Env (local, dev)| http://localhost:5001 (local) |
+| `-e` | Api Env (local, dev)| http://localhost:5001 (local) |
 | `-c` | Chain ID | 42161 (Arbitrum) |
 | `-i` | Token amount to deposit/withdraw | 100000000 |
 | `-s` | Strategy address | 0xC0077E921C30c39cDD8b693E25Af572C10E82a05 |

@@ -19,17 +19,17 @@ USDA_ADDRESS="0x0000206329b97DB379d5E1Bf586BbDB969C63274" # USDA on Arbitrum
 
 # Parse command-line options
 while getopts "e:c:i:r:s:l:u:t:" opt; do
-case $opt in
-    e) env=$OPTARG ;;
-    c) chainId=$OPTARG ;;
-    i) inputTokenAmount=$OPTARG ;;
-    s) strategyAddress=$OPTARG ;;
-    r) routerAddress=$OPTARG ;;
-    l) slippage=$OPTARG ;;
-    u) userAddress=$OPTARG ;;
-    t) tokenChoice=$OPTARG ;;
-    \?) echo "Invalid option -$OPTARG" >&2; exit 1 ;;
-esac
+    case $opt in
+        e) env=$OPTARG ;;
+        c) chainId=$OPTARG ;;
+        i) inputTokenAmount=$OPTARG ;;
+        s) strategyAddress=$OPTARG ;;
+        r) routerAddress=$OPTARG ;;
+        l) slippage=$OPTARG ;;
+        u) userAddress=$OPTARG ;;
+        t) tokenChoice=$OPTARG ;;
+        \?) echo "Invalid option -$OPTARG" >&2; exit 1 ;;
+    esac
 done
 
 # Convert tokenChoice to lowercase
@@ -76,11 +76,41 @@ fi
 # Print the data (for debugging purposes)
 echo "Data field extracted: $data"
 
-forge script scripts/DepositPayloadScript.s.sol \
-    --sender "$userAddress" \
-    --rpc-url fork \
-    --unlocked \
-    --evm-version shanghai \
-    --broadcast \
-    -vvvv \
-    --sig "run(bytes,address,uint256,address,address)" "$data" "$inputTokenAddress" "$inputTokenAmount" "$strategyAddress" "$routerAddress"
+# Ask the user which RPC URL to use
+echo "Which RPC URL do you want to use? (these are values from foundry.toml, check [rpc_endpoints] section and modify .env if needed)"
+echo "1. arbitrum"
+echo "2. fork"
+read -p "Enter your choice (1 or 2): " rpc_choice
+
+# Set the RPC URL and adjust the forge script command based on user choice
+case $rpc_choice in
+    1)
+        rpc_url="arbitrum"
+        forge_command="forge script scripts/DepositPayloadScript.s.sol \
+            --sender \"$userAddress\" \
+            --rpc-url $rpc_url \
+            -i 1 \
+            --broadcast \
+            --evm-version shanghai \
+            -vvvv \
+            --sig \"run(bytes,address,uint256,address,address)\" \"$data\" \"$inputTokenAddress\" \"$inputTokenAmount\" \"$strategyAddress\" \"$routerAddress\""
+        ;;
+    2)
+        rpc_url="fork"
+        forge_command="forge script scripts/DepositPayloadScript.s.sol \
+            --sender \"$userAddress\" \
+            --rpc-url $rpc_url \
+            --broadcast \
+            --unlocked \
+            --evm-version shanghai \
+            -vvvv \
+            --sig \"run(bytes,address,uint256,address,address)\" \"$data\" \"$inputTokenAddress\" \"$inputTokenAmount\" \"$strategyAddress\" \"$routerAddress\""
+        ;;
+    *)
+        echo "Invalid choice. Exiting."
+        exit 1
+        ;;
+esac
+
+# Execute the forge script command
+eval "$forge_command"

@@ -13,7 +13,6 @@ contract WithdrawPayloadScript is Script {
 
     function run(
         bytes calldata data,
-        address outputTokenAddress,
         uint256 inputTokenAmount,
         address strategyAddress,
         address routerAddress

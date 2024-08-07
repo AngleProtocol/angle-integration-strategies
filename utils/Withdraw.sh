@@ -66,11 +66,24 @@ esac
 # Construct the URL
 url="${base_url}/v1/integrators/payload/withdraw?chainId=$chainId&outputTokenAddress=$outputTokenAddress&inputTokenAmount=$inputTokenAmount&strategyAddress=$strategyAddress&userAddress=$userAddress&slippage=$slippage&ipAddress=none"
 
-echo $url
 
-# Call the URL and extract the data field
+# Call the URL and extract the data field or error message
 response=$(curl -s "$url")
-data=$(echo "$response" | jq -r '.data')
+if echo "$response" | jq -e '.error' > /dev/null; then
+    error_message=$(echo "$response" | jq -r '.message')
+    echo "Error from API: $error_message"
+    exit 1
+elif echo "$response" | jq -e '.data' > /dev/null; then
+    data=$(echo "$response" | jq -r '.data')
+    if [ -z "$data" ]; then
+        echo "Failed to retrieve 'data' from response."
+        exit 1
+    fi
+else
+    echo "Unexpected response format from API."
+    echo "Full response: $response"
+    exit 1
+fi
 
 # Check if the data field is empty or not
 if [ -z "$data" ]; then
@@ -81,11 +94,41 @@ fi
 # Print the data (for debugging purposes)
 echo "Data field extracted: $data"
 
-forge script scripts/WithdrawPayloadScript.s.sol \
-    --sender "$userAddress" \
-    --rpc-url fork \
-    --unlocked \
-    --evm-version shanghai \
-    --broadcast \
-    -vvvv \
-    --sig "run(bytes,address,uint256,address,address)" "$data" "$outputTokenAddress" "$inputTokenAmount" "$strategyAddress" "$routerAddress"
+# Ask the user which RPC URL to use
+echo "Which RPC URL do you want to use?"
+echo "1. Arbitrum"
+echo "2. Fork"
+read -p "Enter your choice (1 or 2): " rpc_choice
+
+# Set the RPC URL and adjust the forge script command based on user choice
+case $rpc_choice in
+    1)
+        rpc_url="arbitrum"
+        forge_command="forge script scripts/WithdrawPayloadScript.s.sol \
+            --sender \"$userAddress\" \
+            --rpc-url $rpc_url \
+            -i 1 \
+            --evm-version shanghai \
+            --broadcast \
+            -vvvv \
+            --sig \"run(bytes,uint256,address,address)\" \"$data\" \"$inputTokenAmount\" \"$strategyAddress\" \"$routerAddress\""
+        ;;
+    2)
+        rpc_url="fork"
+        forge_command="forge script scripts/WithdrawPayloadScript.s.sol \
+            --sender \"$userAddress\" \
+            --rpc-url $rpc_url \
+            --unlocked \
+            --broadcast \
+            --evm-version shanghai \
+            -vvvv \
+            --sig \"run(bytes,uint256,address,address)\" \"$data\" \"$inputTokenAmount\" \"$strategyAddress\" \"$routerAddress\""
+        ;;
+    *)
+        echo "Invalid choice. Exiting."
+        exit 1
+        ;;
+esac
+
+# Execute the forge script command
+eval "$forge_command"
