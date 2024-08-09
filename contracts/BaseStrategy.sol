@@ -576,8 +576,24 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
     }
 
     /*//////////////////////////////////////////////////////////////
-                            SWAP LOGIC
+                            KEEPER LOGIC
     //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Recover tokens from the strategy
+     * @param tokens array of tokens to recover
+     * @param receiver address to receive the tokens
+     * @custom:requires KEEPER_ROLE
+     */
+    function recoverTokens(address[] calldata tokens, address receiver) public onlyRole(KEEPER_ROLE) {
+        uint256 length = tokens.length;
+        for (uint256 i; i < length; ++i) {
+            address token = tokens[i];
+            if (token != asset() && token != STRATEGY_ASSET) {
+                IERC20(token).safeTransfer(receiver, IERC20(token).balanceOf(address(this)));
+            }
+        }
+    }
 
     /**
      * @notice Swap tokens using the router/aggregator + vest the profit
