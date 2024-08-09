@@ -586,6 +586,10 @@ abstract contract BaseStrategy is ERC4626, AccessControl {
      * @custom:requires KEEPER_ROLE
      */
     function recoverTokens(address[] calldata tokens, address receiver) public onlyRole(KEEPER_ROLE) {
+        if (receiver == address(0)) {
+            revert ZeroAddress();
+        }
+
         uint256 length = tokens.length;
         for (uint256 i; i < length; ++i) {
             address token = tokens[i];
