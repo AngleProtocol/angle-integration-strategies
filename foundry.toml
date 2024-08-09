@@ -17,8 +17,9 @@ ffi = true
 runs = 10000
 
 [invariant]
-runs = 1000
-depth = 30
+runs = 10
+depth = 1000
+fail_on_revert = true
 
 [rpc_endpoints]
 arbitrum = "${ETH_NODE_URI_ARBITRUM}"
@@ -57,7 +58,7 @@ runs = 2000
 [profile.dev.invariant]
 runs = 10
 depth = 1
-fail_on_revert = false
+fail_on_revert = true
 
 [profile.ci]
 src = "test"
@@ -70,4 +71,4 @@ runs = 100
 [profile.ci.invariant]
 runs = 10
 depth = 30
-fail_on_revert = false
+fail_on_revert = true
