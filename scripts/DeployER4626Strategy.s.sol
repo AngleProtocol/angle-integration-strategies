@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: Unlicensed
 pragma solidity ^0.8.19;
 
 import { ERC4626Strategy, BaseStrategy } from "../contracts/ERC4626Strategy.sol";

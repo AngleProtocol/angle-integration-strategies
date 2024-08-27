@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.26;
 
 import { ERC4626, IERC20, ERC20, Math } from "oz/token/ERC20/extensions/ERC4626.sol";

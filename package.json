@@ -1,5 +1,5 @@
 {
-  "name": "angle-boilerplate",
+  "name": "angle-integration-strategies",
   "version": "1.0.0",
   "description": "",
   "scripts": {
@@ -28,7 +28,7 @@
   },
   "keywords": [],
   "author": "Angle Core Team",
-  "license": "GPL-3.0",
+  "license": "BUSL-1.1",
   "bugs": {
     "url": "https://github.com/AngleProtocol/boilerplate/issues"
   },
