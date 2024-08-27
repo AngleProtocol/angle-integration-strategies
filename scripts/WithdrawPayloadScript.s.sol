@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Unlicensed
 pragma solidity >=0.8.20;
 
 import { Script } from "forge-std/Script.sol";
