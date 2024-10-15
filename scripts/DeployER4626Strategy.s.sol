@@ -9,8 +9,8 @@ import "forge-std/Script.sol";
 contract DeployERC4626Strategy is Script, CommonUtils {
     function run() external {
         uint256 chainId = CHAIN_SOURCE;
-        uint256 deployerPrivateKey = vm.deriveKey(vm.envString("MNEMONIC_MAINNET"), "m/44'/60'/0'/0/", 0);
 
+        uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
 
         address deployer = vm.addr(deployerPrivateKey);
@@ -18,17 +18,19 @@ contract DeployERC4626Strategy is Script, CommonUtils {
 
         /** TODO  complete */
         address asset = _chainToContract(chainId, ContractType.AgUSD);
-        address strategyAsset = _chainToContract(chainId, ContractType.StUSD);
+        // address strategyAsset = _chainToContract(chainId, ContractType.StUSD);
+        address strategyAsset = 0x125D41A6e5dbf455cD9Df8F80BCC6fd172D52Cc6;
 
-        address integrator = _chainToContract(chainId, ContractType.GuardianMultisig);
+        address integrator = 0xcccc68b4aCf30A020A25D25Bc2Cc0ab96C80c9FC;
         address developer = _chainToContract(chainId, ContractType.GuardianMultisig);
         address keeper = 0xa9bbbDDe822789F123667044443dc7001fb43C01;
 
-        uint32 performanceFee = 1_000; // 10%
-        uint32 developerFee = 2_000; // 20%
+        uint32 performanceFee = 1_500; // 15%
+        uint32 developerFee = 0; // 0%
+        uint64 vestingPeriod = 0 weeks; // no vesting on stUSD as not playable
 
-        string memory name = "stUSD Strategy";
-        string memory symbol = "stUSDStrat";
+        string memory name = "USDA Morpho Gauntlet Strategy Trust Wallet";
+        string memory symbol = "USDA-MG-TW";
         /** END  complete */
 
         ERC4626Strategy strategy = new ERC4626Strategy(
@@ -42,7 +44,7 @@ contract DeployERC4626Strategy is Script, CommonUtils {
                 integrator,
                 ONEINCH_ROUTER,
                 ONEINCH_ROUTER,
-                1 weeks,
+                vestingPeriod,
                 name,
                 symbol,
                 asset,
